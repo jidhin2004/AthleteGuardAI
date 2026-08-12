@@ -1,0 +1,636 @@
+{% extends 'base.html' %}
+
+{% block title %}AthleteGuard AI - Explainable Sports Injury Prediction System{% endblock %}
+
+{% block content %}
+<div class="w-100">
+  
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg landing-navbar" id="top">
+    <div class="container">
+      <a class="navbar-brand-landing" href="{{ url_for('index') }}">
+        <div class="brand-icon-md">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="brand-text-container">
+          <span class="brand-name-landing">AthleteGuard AI</span>
+          <span class="ai-badge" style="width: max-content;">AI POWERED</span>
+        </div>
+      </a>
+
+      <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#landingNavbarNav" aria-controls="landingNavbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="fa-solid fa-bars fs-4"></i>
+      </button>
+
+      <div class="collapse navbar-collapse" id="landingNavbarNav">
+        <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link nav-link-landing active" href="#top">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-link-landing" href="#about">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-link-landing" href="#features">Features</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-link-landing" href="#how-it-works">How It Works</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-link-landing" href="#ml-model">AI Model</a>
+          </li>
+        </ul>
+
+        <div class="d-flex align-items-center gap-2">
+          {% if session.get('user_id') %}
+            <a href="{{ url_for('dashboard') }}" class="btn-nav-register">
+              <i class="fa-solid fa-gauge me-1"></i> Go to Dashboard
+            </a>
+          {% else %}
+            <a href="{{ url_for('login') }}" class="btn-nav-login">Sign In</a>
+            <a href="{{ url_for('register') }}" class="btn-nav-register">Create Athlete Account</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="landing-hero">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        
+        <!-- Left Hero Column -->
+        <div class="col-lg-7">
+          <div class="hero-tag-badge">
+            <i class="fa-solid fa-bolt"></i> AI-Powered Athlete Health Platform
+          </div>
+
+          <h1 class="landing-hero-title">
+            Protect Your Performance.<br>Predict Injury Risk.
+          </h1>
+
+          <p class="landing-hero-subtitle">
+            AthleteGuard AI combines daily health monitoring with machine learning to help athletes understand their injury risk through explainable and easy-to-understand predictions.
+          </p>
+
+          <div class="hero-actions">
+            {% if session.get('user_id') %}
+              <a href="{{ url_for('dashboard') }}" class="btn-hero-primary">
+                Open Dashboard <i class="fa-solid fa-arrow-right"></i>
+              </a>
+            {% else %}
+              <a href="{{ url_for('register') }}" class="btn-hero-primary">
+                Get Started <i class="fa-solid fa-arrow-right"></i>
+              </a>
+              <a href="{{ url_for('login') }}" class="btn-hero-secondary">
+                Sign In <i class="fa-solid fa-arrow-right-to-bracket ms-1"></i>
+              </a>
+            {% endif %}
+          </div>
+
+          <div class="hero-features-list">
+            <span><i class="fa-solid fa-circle-check"></i> Explainable AI</span>
+            <span><i class="fa-solid fa-circle-check"></i> Health Monitoring</span>
+            <span><i class="fa-solid fa-circle-check"></i> Secure Athlete Records</span>
+          </div>
+        </div>
+
+        <!-- Right Hero Column (Sample Mock Analytics Card) -->
+        <div class="col-lg-5">
+          <div class="hero-mock-widget">
+            <span class="widget-badge-demo">SAMPLE DATA DEMONSTRATION</span>
+            
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div class="brand-icon-sm bg-primary text-white rounded-3 p-2 text-center" style="width:40px; height:40px;">
+                <i class="fa-solid fa-heart-pulse fs-5"></i>
+              </div>
+              <div>
+                <h6 class="mb-0 text-white fw-bold font-heading">Athlete Health Status</h6>
+                <small class="text-white-50">Visual Demonstration Only</small>
+              </div>
+            </div>
+
+            <div class="mock-metrics-grid">
+              <div class="mock-stat-box">
+                <div class="mock-stat-val text-info">164 bpm</div>
+                <div class="mock-stat-lbl">Heart Rate</div>
+              </div>
+
+              <div class="mock-stat-box">
+                <div class="mock-stat-val text-primary">7.5 hrs</div>
+                <div class="mock-stat-lbl">Sleep Duration</div>
+              </div>
+
+              <div class="mock-stat-box">
+                <div class="mock-stat-val text-warning">18%</div>
+                <div class="mock-stat-lbl">Fatigue Index</div>
+              </div>
+
+              <div class="mock-stat-box">
+                <div class="mock-stat-val text-success">LOW</div>
+                <div class="mock-stat-lbl">Injury Risk</div>
+              </div>
+            </div>
+
+            <div class="mt-3 p-2 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-10 text-center">
+              <small class="text-white-50 fs-8">
+                <i class="fa-solid fa-circle-info me-1 text-info"></i>
+                Random Forest ML Risk Model: 12% Low Probability
+              </small>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- About / Project Introduction -->
+  <section class="section-padding bg-white" id="about">
+    <div class="container">
+      <div class="text-center mb-5">
+        <span class="section-tag">Project Scope</span>
+        <h2 class="section-title">Why AthleteGuard AI?</h2>
+        <p class="section-subtitle">
+          Athletes often monitor training performance but may overlook important health factors such as sleep, fatigue, stress and previous injuries. AthleteGuard AI brings these factors together and uses machine learning to estimate injury risk based on the submitted health information.
+        </p>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="about-card">
+            <div class="about-icon-circle">
+              <i class="fa-solid fa-heart-pulse"></i>
+            </div>
+            <h3 class="about-card-title">MONITOR</h3>
+            <p class="about-card-text">
+              Track daily health and training parameters including sleep hours, resting heart rate, fatigue, and stress levels.
+            </p>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="about-card">
+            <div class="about-icon-circle">
+              <i class="fa-solid fa-microchip"></i>
+            </div>
+            <h3 class="about-card-title">PREDICT</h3>
+            <p class="about-card-text">
+              Use Random Forest machine learning classification to estimate injury risk accurately based on submitted health metrics.
+            </p>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="about-card">
+            <div class="about-icon-circle">
+              <i class="fa-solid fa-chart-pie"></i>
+            </div>
+            <h3 class="about-card-title">UNDERSTAND</h3>
+            <p class="about-card-text">
+              View an easy-to-understand prediction result with feature breakdown, historical trends, and weekly summaries.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="section-padding" id="features">
+    <div class="container">
+      <div class="text-center mb-5">
+        <span class="section-tag">Semester 3 Scope</span>
+        <h2 class="section-title">Everything You Need to Monitor Athlete Health</h2>
+        <p class="section-subtitle">
+          Designed specifically for explainable injury risk prediction and performance management.
+        </p>
+      </div>
+
+      <div class="row g-4">
+        
+        <!-- Feature 1 -->
+        <div class="col-md-6 col-lg-4">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <i class="fa-regular fa-user"></i>
+            </div>
+            <h3 class="feature-card-title">1. Athlete Profile</h3>
+            <p class="feature-card-desc">
+              Manage personal and sport-related information including primary sport discipline, age, and physical attributes.
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="col-md-6 col-lg-4">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <i class="fa-solid fa-notes-medical"></i>
+            </div>
+            <h3 class="feature-card-title">2. Medical History</h3>
+            <p class="feature-card-desc">
+              Maintain previous injuries, medical conditions, allergies, medications, and surgery history for complete context.
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="col-md-6 col-lg-4">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <h3 class="feature-card-title">3. Daily Health Monitoring</h3>
+            <p class="feature-card-desc">
+              Record sleep hours, training hours, resting heart rate, fatigue level, stress level, and previous injury occurrences.
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="col-md-6 col-lg-4">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <i class="fa-solid fa-shield-virus"></i>
+            </div>
+            <h3 class="feature-card-title">4. AI Injury Risk Prediction</h3>
+            <p class="feature-card-desc">
+              Random Forest classification categorizing injury risk into Low Risk, Medium Risk, and High Risk levels.
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="col-md-6 col-lg-4">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <h3 class="feature-card-title">5. Prediction History</h3>
+            <p class="feature-card-desc">
+              Review previous health inputs and prediction results to observe biometric patterns over time.
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="col-md-6 col-lg-4">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h3 class="feature-card-title">6. Health Analytics</h3>
+            <p class="feature-card-desc">
+              View clear weekly and monthly health summaries with interactive Chart.js visual graphs.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="section-padding bg-white" id="how-it-works">
+    <div class="container">
+      <div class="text-center mb-5">
+        <span class="section-tag">Simple Process</span>
+        <h2 class="section-title">How AthleteGuard AI Works</h2>
+        <p class="section-subtitle">
+          Follow a simple 4-step workflow to monitor your health and prevent injuries.
+        </p>
+      </div>
+
+      <div class="process-timeline">
+        
+        <div class="step-card">
+          <div class="step-num-badge">01</div>
+          <h3 class="step-title">Create Athlete Profile</h3>
+          <p class="step-desc">Register and provide basic athlete information including sport, age, and medical context.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num-badge">02</div>
+          <h3 class="step-title">Record Daily Health</h3>
+          <p class="step-desc">Enter daily health and training parameters like sleep hours, resting HR, stress, and fatigue.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num-badge">03</div>
+          <h3 class="step-title">AI Risk Prediction</h3>
+          <p class="step-desc">The Random Forest machine learning model analyzes the submitted biometric information.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num-badge">04</div>
+          <h3 class="step-title">View & Track Results</h3>
+          <p class="step-desc">Understand the prediction, view feature importance, and monitor historical risk trends.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Machine Learning Model Section -->
+  <section class="section-padding" id="ml-model">
+    <div class="container">
+      <div class="ml-flow-card">
+        <div class="text-center mb-4">
+          <span class="badge bg-primary bg-opacity-20 text-info rounded-pill px-3 py-1 mb-2 font-monospace">MACHINE LEARNING ENGINE</span>
+          <h2 class="text-white fw-bold font-heading fs-2">Explainable Machine Learning for Injury Risk</h2>
+          <p class="text-white-50 mx-auto" style="max-width: 650px;">
+            AthleteGuard AI uses a Random Forest classification model to analyze selected athlete health and training parameters and classify the estimated injury risk.
+          </p>
+        </div>
+
+        <!-- Visual Flow Chart -->
+        <div class="ml-flow-steps">
+          <div class="ml-flow-node">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <span class="fw-bold">Health Inputs</span>
+          </div>
+
+          <div class="ml-flow-arrow">
+            <i class="fa-solid fa-chevron-right"></i>
+          </div>
+
+          <div class="ml-flow-node">
+            <i class="fa-solid fa-diagram-project"></i>
+            <span class="fw-bold">Random Forest Model</span>
+          </div>
+
+          <div class="ml-flow-arrow">
+            <i class="fa-solid fa-chevron-right"></i>
+          </div>
+
+          <div class="ml-flow-node">
+            <i class="fa-solid fa-sliders"></i>
+            <span class="fw-bold">Risk Classification</span>
+          </div>
+
+          <div class="ml-flow-arrow">
+            <i class="fa-solid fa-chevron-right"></i>
+          </div>
+
+          <div class="ml-flow-node" style="border-color: #22c55e;">
+            <i class="fa-solid fa-chart-pie" style="color: #22c55e;"></i>
+            <span class="fw-bold text-success">LOW / MED / HIGH</span>
+          </div>
+        </div>
+
+        <!-- Medical Disclaimer -->
+        <div class="medical-disclaimer-box">
+          <i class="fa-solid fa-triangle-exclamation fs-4 flex-shrink-0"></i>
+          <div>
+            <strong>Important Notice:</strong> Predictions are intended for educational and health-monitoring purposes and should not replace professional medical advice.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Health Parameters Section -->
+  <section class="section-padding bg-white" id="parameters">
+    <div class="container">
+      <div class="text-center mb-5">
+        <span class="section-tag">Input Parameters</span>
+        <h2 class="section-title">Monitored Health & Training Parameters</h2>
+        <p class="section-subtitle">
+          Six key metrics evaluated by the Random Forest classifier to determine injury susceptibility.
+        </p>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-4 col-sm-6">
+          <div class="param-card">
+            <div class="param-icon-box">
+              <i class="fa-solid fa-bed"></i>
+            </div>
+            <div>
+              <h4 class="param-name">Sleep Hours</h4>
+              <small class="text-muted">Rest & recovery duration</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+          <div class="param-card">
+            <div class="param-icon-box">
+              <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <div>
+              <h4 class="param-name">Training Hours</h4>
+              <small class="text-muted">Daily workout load</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+          <div class="param-card">
+            <div class="param-icon-box">
+              <i class="fa-solid fa-heart-pulse"></i>
+            </div>
+            <div>
+              <h4 class="param-name">Resting Heart Rate</h4>
+              <small class="text-muted">Cardiovascular baseline</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+          <div class="param-card">
+            <div class="param-icon-box">
+              <i class="fa-solid fa-battery-quarter"></i>
+            </div>
+            <div>
+              <h4 class="param-name">Fatigue Level</h4>
+              <small class="text-muted">Subjective muscle tiredness</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+          <div class="param-card">
+            <div class="param-icon-box">
+              <i class="fa-solid fa-brain"></i>
+            </div>
+            <div>
+              <h4 class="param-name">Stress Level</h4>
+              <small class="text-muted">Mental & physical strain</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+          <div class="param-card">
+            <div class="param-icon-box">
+              <i class="fa-solid fa-user-injured"></i>
+            </div>
+            <div>
+              <h4 class="param-name">Previous Injury</h4>
+              <small class="text-muted">Prior joint/muscle history</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Risk Level Section -->
+  <section class="section-padding" id="risk-levels">
+    <div class="container">
+      <div class="text-center mb-5">
+        <span class="section-tag">Explainable Outputs</span>
+        <h2 class="section-title">Risk Classification Categories</h2>
+        <p class="section-subtitle">
+          The risk category represents an estimated injury-risk level based on the submitted health information.
+        </p>
+      </div>
+
+      <div class="row g-4">
+        
+        <!-- Low Risk -->
+        <div class="col-md-4">
+          <div class="risk-card risk-card-low">
+            <div class="risk-card-header">
+              <h3 class="risk-card-title">LOW RISK</h3>
+              <i class="fa-solid fa-circle-check fs-3"></i>
+            </div>
+            <p class="risk-card-desc">
+              Low probability of muscle fatigue or joint strain. Biometric indicators and recovery metrics are in optimal ranges.
+            </p>
+          </div>
+        </div>
+
+        <!-- Medium Risk -->
+        <div class="col-md-4">
+          <div class="risk-card risk-card-medium">
+            <div class="risk-card-header">
+              <h3 class="risk-card-title">MEDIUM RISK</h3>
+              <i class="fa-solid fa-triangle-exclamation fs-3"></i>
+            </div>
+            <p class="risk-card-desc">
+              Moderate workload strain detected. High fatigue or elevated heart rate observed. Workload reduction and active recovery advised.
+            </p>
+          </div>
+        </div>
+
+        <!-- High Risk -->
+        <div class="col-md-4">
+          <div class="risk-card risk-card-high">
+            <div class="risk-card-header">
+              <h3 class="risk-card-title">HIGH RISK</h3>
+              <i class="fa-solid fa-circle-exclamation fs-3"></i>
+            </div>
+            <p class="risk-card-desc">
+              High neuromuscular strain and elevated risk of strain. Immediate rest, hydration, and medical check advised before intense sessions.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Technologies Section -->
+  <section class="section-padding bg-white text-center" id="technologies">
+    <div class="container">
+      <span class="section-tag">Tech Architecture</span>
+      <h2 class="section-title">Technologies Used</h2>
+      <p class="section-subtitle">
+        Built with modern web technologies and Python machine learning libraries.
+      </p>
+
+      <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+        <div class="tech-pill"><i class="fa-brands fa-html5"></i> HTML5</div>
+        <div class="tech-pill"><i class="fa-brands fa-css3-alt"></i> CSS3</div>
+        <div class="tech-pill"><i class="fa-brands fa-bootstrap"></i> Bootstrap 5</div>
+        <div class="tech-pill"><i class="fa-brands fa-js"></i> JavaScript</div>
+        <div class="tech-pill"><i class="fa-brands fa-python"></i> Python</div>
+        <div class="tech-pill"><i class="fa-solid fa-flask"></i> Flask</div>
+        <div class="tech-pill"><i class="fa-solid fa-database"></i> MySQL</div>
+        <div class="tech-pill"><i class="fa-solid fa-tree"></i> Random Forest</div>
+        <div class="tech-pill"><i class="fa-solid fa-chart-pie"></i> Chart.js</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA Section -->
+  <section class="section-padding container my-5" id="cta">
+    <div class="cta-section text-center">
+      <div class="container px-4">
+        <h2 class="cta-title">Start Monitoring Your Athletic Health</h2>
+        <p class="cta-subtitle">
+          Create your AthleteGuard AI account and begin recording your health and training information.
+        </p>
+
+        <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
+          {% if session.get('user_id') %}
+            <a href="{{ url_for('dashboard') }}" class="btn-hero-primary">
+              Go to Dashboard <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          {% else %}
+            <a href="{{ url_for('register') }}" class="btn-hero-primary">
+              Create Athlete Account <i class="fa-solid fa-arrow-right"></i>
+            </a>
+            <a href="{{ url_for('login') }}" class="btn-hero-secondary">
+              Already have an account? Sign In
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <div class="container">
+      <div class="row g-4">
+        
+        <div class="col-lg-5">
+          <div class="footer-brand">AthleteGuard AI</div>
+          <p class="footer-desc">
+            Explainable Sports Injury Prediction and Athlete Performance Management System using Machine Learning.
+          </p>
+          <span class="badge bg-primary bg-opacity-20 text-info rounded-pill px-3 py-1 font-monospace">
+            MCA Semester 3 Mini Project
+          </span>
+        </div>
+
+        <div class="col-lg-3 col-6">
+          <h4 class="footer-links-title">Quick Links</h4>
+          <ul class="footer-links-list">
+            <li><a href="#top">Home</a></li>
+            <li><a href="#about">About Project</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-4 col-6">
+          <h4 class="footer-links-title">Athlete Access</h4>
+          <ul class="footer-links-list">
+            <li><a href="{{ url_for('login') }}">Athlete Login</a></li>
+            <li><a href="{{ url_for('register') }}">Create Athlete Account</a></li>
+            <li><a href="{{ url_for('dashboard') }}">Athlete Dashboard</a></li>
+            <li><a href="#ml-model">Random Forest AI Model</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          © 2026 AthleteGuard AI. MCA Semester 3 Mini Project.
+        </div>
+        <div>
+          Version 1.0 — All Rights Reserved.
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div>
+{% endblock %}

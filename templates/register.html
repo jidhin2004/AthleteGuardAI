@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+
+{% block title %}Register - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <!-- Left Hero Panel -->
+  <div class="hero-panel">
+    <div class="hud-header">
+      <span><i class="dot"></i> ATHLETE_01</span>
+      <span>RUNNING DYNAMICS / AI ANALYTICS</span>
+    </div>
+
+    <div class="hero-content">
+      <h1 class="hero-title">Join<br>AthleteGuard AI</h1>
+      <p class="hero-subtitle">
+        Create your athlete profile and begin monitoring your health using AI-powered injury prediction.
+      </p>
+
+      <div class="feature-pills">
+        <div class="glass-pill">
+          <span class="check-icon"><i class="fa-solid fa-check"></i></span>
+          <span>Personalized Monitoring</span>
+        </div>
+        <div class="glass-pill">
+          <span class="check-icon"><i class="fa-solid fa-check"></i></span>
+          <span>Machine Learning Insights</span>
+        </div>
+        <div class="glass-pill">
+          <span class="check-icon"><i class="fa-solid fa-check"></i></span>
+          <span>Secure Athlete Records</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-footer-metrics">
+      <span>PACE: 3:45 min/km</span>
+      <span>HR: 164 bpm</span>
+      <span>STRIDE LENGTH: 1.2m</span>
+    </div>
+  </div>
+
+  <!-- Right Form Panel -->
+  <div class="form-panel">
+    <div class="form-container">
+      
+      <!-- Brand Logo with AI Powered Badge -->
+      <div class="brand-header">
+        <div class="brand-logo-wrapper">
+          <div class="brand-name text-primary fw-bold fs-6">AthleteGuard AI</div>
+          <span class="ai-badge">AI POWERED</span>
+        </div>
+      </div>
+
+      <!-- Title & Subtitle -->
+      <h2 class="form-title">Create Your Athlete Account</h2>
+      <p class="form-subtitle">
+        Join AthleteGuard AI and begin monitoring your health using AI-powered injury prediction.
+      </p>
+
+      {% if success_msg %}
+      <div class="alert alert-success alert-custom shadow-sm" role="alert">
+        <i class="fa-solid fa-circle-check fs-5"></i>
+        <div>{{ success_msg }}</div>
+      </div>
+      {% endif %}
+
+      <!-- Registration Form -->
+      <form id="registerForm" method="POST" action="{{ url_for('register') }}" novalidate>
+        
+        <!-- Row 1: Full Name & Age -->
+        <div class="row g-3">
+          <div class="col-sm-7 form-group">
+            <label for="regFullName" class="form-label">Full Name</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-regular fa-user input-icon"></i>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="regFullName" 
+                name="full_name" 
+                placeholder="John Doe" 
+                required
+              >
+            </div>
+            <div class="invalid-feedback" id="fullNameError">Full Name is required.</div>
+          </div>
+
+          <div class="col-sm-5 form-group">
+            <label for="regAge" class="form-label">Age</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-regular fa-calendar input-icon"></i>
+              <input 
+                type="number" 
+                class="form-control" 
+                id="regAge" 
+                name="age" 
+                placeholder="25" 
+                min="10" 
+                max="100" 
+                required
+              >
+            </div>
+            <div class="invalid-feedback" id="ageError">Enter valid age.</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Gender & Primary Sport -->
+        <div class="row g-3">
+          <div class="col-sm-6 form-group">
+            <label for="regGender" class="form-label">Gender</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-users input-icon"></i>
+              <select class="form-select" id="regGender" name="gender" required>
+                <option value="" selected disabled>Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            </div>
+            <div class="invalid-feedback" id="genderError">Select gender.</div>
+          </div>
+
+          <div class="col-sm-6 form-group">
+            <label for="regSport" class="form-label">Primary Sport</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-volleyball input-icon"></i>
+              <select class="form-select" id="regSport" name="primary_sport" required>
+                <option value="" selected disabled>Select Sport</option>
+                <option value="Running">Running / Athletics</option>
+                <option value="Football">Football / Soccer</option>
+                <option value="Basketball">Basketball</option>
+                <option value="Tennis">Tennis</option>
+                <option value="Swimming">Swimming</option>
+                <option value="Cycling">Cycling</option>
+                <option value="Cricket">Cricket</option>
+                <option value="Gymnastics">Gymnastics</option>
+                <option value="Other">Other Sport</option>
+              </select>
+            </div>
+            <div class="invalid-feedback" id="sportError">Select sport.</div>
+          </div>
+        </div>
+
+        <!-- Row 3: Email Address -->
+        <div class="form-group">
+          <label for="regEmail" class="form-label">Email Address</label>
+          <div class="input-icon-wrapper">
+            <i class="fa-regular fa-envelope input-icon"></i>
+            <input 
+              type="email" 
+              class="form-control" 
+              id="regEmail" 
+              name="email" 
+              placeholder="athlete@example.com" 
+              required
+            >
+          </div>
+          <div class="invalid-feedback" id="emailError">Enter a valid email address.</div>
+        </div>
+
+        <!-- Row 4: Password & Confirm Password -->
+        <div class="row g-3">
+          <div class="col-sm-6 form-group">
+            <label for="regPassword" class="form-label">Password</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock input-icon"></i>
+              <input 
+                type="password" 
+                class="form-control" 
+                id="regPassword" 
+                name="password" 
+                placeholder="••••••••" 
+                required
+              >
+              <button type="button" class="password-toggle" data-target="regPassword" aria-label="Toggle password visibility">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+            <!-- Strength Meter Bar -->
+            <div class="strength-meter">
+              <div class="strength-bars">
+                <div class="strength-bar" id="bar1"></div>
+                <div class="strength-bar" id="bar2"></div>
+                <div class="strength-bar" id="bar3"></div>
+              </div>
+              <span class="strength-label" id="strengthLabel">Strength</span>
+            </div>
+            <div class="invalid-feedback" id="passwordError">Min 6 characters required.</div>
+          </div>
+
+          <div class="col-sm-6 form-group">
+            <label for="regConfirmPassword" class="form-label">Confirm Password</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-rotate-left input-icon"></i>
+              <input 
+                type="password" 
+                class="form-control" 
+                id="regConfirmPassword" 
+                name="confirm_password" 
+                placeholder="••••••••" 
+                required
+              >
+            </div>
+            <div class="invalid-feedback" id="confirmPasswordError">Passwords must match.</div>
+          </div>
+        </div>
+
+        <!-- Terms & Privacy Checkbox -->
+        <div class="form-group my-3">
+          <label class="form-check">
+            <input class="form-check-input" type="checkbox" id="regTerms" name="terms" required>
+            <span>I agree to the <a href="#" class="form-link">Terms of Service</a> and <a href="#" class="form-link">Privacy Policy</a>.</span>
+          </label>
+          <div class="invalid-feedback" id="termsError">You must agree before registering.</div>
+        </div>
+
+        <!-- Primary Create Account Button -->
+        <button type="submit" class="btn-primary-action mt-3">
+          Create Athlete Account <i class="fa-solid fa-arrow-right ms-1"></i>
+        </button>
+
+      </form>
+
+      <!-- Trust Badges -->
+      <div class="trust-badges">
+        <div class="trust-badge">
+          <i class="fa-regular fa-circle-check"></i>
+          <span>Secure Registration</span>
+        </div>
+        <div class="trust-badge">
+          <i class="fa-solid fa-bolt"></i>
+          <span>AI-Powered Analysis</span>
+        </div>
+        <div class="trust-badge">
+          <i class="fa-solid fa-shield"></i>
+          <span>Encrypted Data Storage</span>
+        </div>
+      </div>
+
+      <!-- Existing account link -->
+      <div class="text-center mt-3 fs-6">
+        <span class="text-muted">Already have an account?</span> 
+        <a href="{{ url_for('login') }}" class="form-link ms-1">Sign In</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/register-validation.js') }}"></script>
+{% endblock %}
