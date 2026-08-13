@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Daily Health Monitoring - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm"><i class="fa-solid fa-shield-halved"></i></div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge">AI POWERED</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item-link">
+          <i class="fa-solid fa-chart-line"></i><span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('profile') }}" class="nav-item-link">
+          <i class="fa-regular fa-user"></i><span>Profile</span>
+        </a>
+        <a href="{{ url_for('medical_history') }}" class="nav-item-link">
+          <i class="fa-solid fa-notes-medical"></i><span>Medical History</span>
+        </a>
+        <a href="{{ url_for('daily_monitoring') }}" class="nav-item-link active">
+          <i class="fa-solid fa-calendar-check"></i><span>Daily Health Monitoring</span>
+        </a>
+        <a href="{{ url_for('prediction_history') }}" class="nav-item-link">
+          <i class="fa-solid fa-clock-rotate-left"></i><span>Prediction History</span>
+        </a>
+        <a href="{{ url_for('weekly_summary') }}" class="nav-item-link">
+          <i class="fa-solid fa-calendar-week"></i><span>Weekly Summary</span>
+        </a>
+        <a href="{{ url_for('monthly_summary') }}" class="nav-item-link">
+          <i class="fa-solid fa-calendar-days"></i><span>Monthly Summary</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle">{{ user.full_name[0] | upper }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge">{{ user.primary_sport }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link"><i class="fa-solid fa-right-from-bracket"></i></a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-nav-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+        <h1 class="header-title">Daily Health Monitoring Form</h1>
+      </div>
+      <div class="header-right">
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2"><i class="fa-solid fa-sign-out-alt me-1"></i> Logout</a>
+      </div>
+    </header>
+
+    <main class="dashboard-content">
+      <div class="card-master mb-4" style="max-width: 800px;">
+        <div class="card-header-master">
+          <h3 class="card-title-master"><i class="fa-solid fa-file-medical"></i> Record Today's Health Assessment</h3>
+          <span class="badge bg-primary">Random Forest ML Input</span>
+        </div>
+        <p class="text-muted">Submit your daily health and training metrics to calculate your explainable injury risk prediction.</p>
+        
+        <form action="#" method="POST" class="mt-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Sleep Hours</label>
+              <input type="number" step="0.5" class="form-control" placeholder="e.g. 7.5" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Training Hours</label>
+              <input type="number" step="0.5" class="form-control" placeholder="e.g. 3.0" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Resting Heart Rate (bpm)</label>
+              <input type="number" class="form-control" placeholder="e.g. 68" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Fatigue Level</label>
+              <select class="form-select" required>
+                <option value="Low">Low</option>
+                <option value="Moderate">Moderate</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Stress Level</label>
+              <select class="form-select" required>
+                <option value="Low">Low</option>
+                <option value="Moderate">Moderate</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Previous Injury Present?</label>
+              <select class="form-select" required>
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-4 w-100 rounded-3 py-2 fw-semibold">
+            <i class="fa-solid fa-microchip me-1"></i> Calculate Injury Risk Prediction
+          </button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+</div>
+{% endblock %}

@@ -864,32 +864,6 @@ body {
   max-width: 600px;
 }
 
-.banner-stats-row {
-  display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
-.banner-stat-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.banner-stat-val {
-  font-family: var(--font-heading);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 1.2;
-}
-
-.banner-stat-lbl {
-  font-size: 0.775rem;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 /* Master Cards */
 .card-master {
   background-color: var(--bg-card);
@@ -930,6 +904,62 @@ body {
   font-size: 1.1rem;
 }
 
+/* Statistics Mini Cards */
+.stat-card-widget {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card-widget:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.stat-icon-green { background-color: rgba(34, 197, 94, 0.12); color: #22c55e; }
+.stat-icon-blue { background-color: rgba(29, 78, 216, 0.12); color: var(--primary-blue); }
+.stat-icon-purple { background-color: rgba(168, 85, 247, 0.12); color: #a855f7; }
+.stat-icon-amber { background-color: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+
+.stat-card-val {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.1;
+}
+
+.stat-card-lbl {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
 /* Explainable AI Risk Score Meter Widget */
 .risk-meter-container {
   display: flex;
@@ -946,13 +976,14 @@ body {
   width: 110px;
   height: 110px;
   border-radius: 50%;
-  background: conic-gradient(#22c55e 0% 12%, #e2e8f0 12% 100%);
+  background: conic-gradient(#22c55e 0% 18%, #e2e8f0 18% 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   box-shadow: 0 4px 14px rgba(34, 197, 94, 0.2);
   flex-shrink: 0;
+  transition: background 0.5s ease;
 }
 
 .risk-circle-inner {
@@ -996,43 +1027,8 @@ body {
   line-height: 1.4;
 }
 
-/* Feature Importance Breakdown Bars */
-.feature-importance-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.feature-item-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.feature-item-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text-medium);
-}
-
-.feature-progress-track {
-  height: 8px;
-  background-color: var(--bg-input);
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-}
-
-.feature-progress-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.6s ease;
-}
-
-/* Biometric Mini Widgets */
-.stat-widget {
+/* Quick Actions Cards */
+.quick-action-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -1040,75 +1036,93 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
+  text-decoration: none;
+  color: var(--text-dark);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.stat-widget:hover {
+.quick-action-card:hover {
   transform: translateY(-2px);
+  border-color: var(--border-focus);
   box-shadow: var(--shadow-md);
+  color: var(--primary-blue);
 }
 
-.stat-icon-box {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
+.quick-action-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: var(--primary-blue-light);
+  color: var(--primary-blue);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   flex-shrink: 0;
 }
 
-.stat-icon-blue { background-color: rgba(29, 78, 216, 0.1); color: var(--primary-blue); }
-.stat-icon-red { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
-.stat-icon-green { background-color: rgba(34, 197, 94, 0.1); color: #22c55e; }
-.stat-icon-purple { background-color: rgba(168, 85, 247, 0.1); color: #a855f7; }
-
-.stat-value {
+.quick-action-title {
   font-family: var(--font-heading);
-  font-size: 1.45rem;
   font-weight: 700;
-  color: var(--text-dark);
-  line-height: 1.1;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
 }
 
-.stat-title {
+.quick-action-sub {
   font-size: 0.775rem;
   color: var(--text-muted);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-/* AI Insights List */
-.ai-recommendation-item {
-  padding: 1rem 1.25rem;
+/* Empty State Card */
+.empty-state-container {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--bg-input);
   border-radius: var(--radius-md);
-  background-color: var(--bg-input);
-  border-left: 4px solid var(--primary-blue);
-  margin-bottom: 1rem;
+  border: 2px dashed var(--border-color);
 }
 
-.ai-recommendation-item:last-child {
-  margin-bottom: 0;
-}
-
-.ai-item-title {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--text-dark);
-  margin-bottom: 0.3rem;
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: var(--primary-blue-light);
+  color: var(--primary-blue);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  font-size: 1.75rem;
+  margin: 0 auto 1.25rem;
 }
 
-.ai-item-desc {
-  font-size: 0.875rem;
+.empty-state-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+  font-size: 0.9rem;
   color: var(--text-muted);
-  margin-bottom: 0;
-  line-height: 1.4;
+  max-width: 450px;
+  margin: 0 auto 1.5rem;
+}
+
+/* Loading Skeletons */
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: loadingPulse 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes loadingPulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* Session History Table */
@@ -1143,6 +1157,24 @@ body {
 .badge-risk-low {
   background-color: rgba(34, 197, 94, 0.15);
   color: #15803d;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.badge-risk-medium {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.badge-risk-high {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
   font-weight: 600;
   font-size: 0.75rem;
   padding: 4px 10px;

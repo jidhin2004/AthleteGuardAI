@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard - AthleteGuard AI{% endblock %}
+{% block title %}Athlete Dashboard - AthleteGuard AI{% endblock %}
 
 {% block content %}
 <div class="dashboard-wrapper">
@@ -8,6 +8,7 @@
   <!-- Sidebar Navigation -->
   <aside class="app-sidebar" id="appSidebar">
     <div>
+      <!-- Brand Header -->
       <div class="sidebar-header">
         <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
           <div class="brand-icon-sm">
@@ -20,30 +21,40 @@
         </a>
       </div>
 
+      <!-- Navigation Links -->
       <nav class="sidebar-nav">
         <a href="{{ url_for('dashboard') }}" class="nav-item-link active">
           <i class="fa-solid fa-chart-line"></i>
           <span>Dashboard</span>
         </a>
-        <a href="#" class="nav-item-link">
-          <i class="fa-solid fa-heart-pulse"></i>
-          <span>Injury Predictor</span>
-        </a>
-        <a href="#" class="nav-item-link">
-          <i class="fa-solid fa-person-running"></i>
-          <span>Biometrics Tracker</span>
-        </a>
-        <a href="#" class="nav-item-link">
-          <i class="fa-solid fa-bolt"></i>
-          <span>AI Performance</span>
-        </a>
-        <a href="#" class="nav-item-link">
+        <a href="{{ url_for('profile') }}" class="nav-item-link">
           <i class="fa-regular fa-user"></i>
-          <span>Athlete Profile</span>
+          <span>Profile</span>
+        </a>
+        <a href="{{ url_for('medical_history') }}" class="nav-item-link">
+          <i class="fa-solid fa-notes-medical"></i>
+          <span>Medical History</span>
+        </a>
+        <a href="{{ url_for('daily_monitoring') }}" class="nav-item-link">
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>Daily Health Monitoring</span>
+        </a>
+        <a href="{{ url_for('prediction_history') }}" class="nav-item-link">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Prediction History</span>
+        </a>
+        <a href="{{ url_for('weekly_summary') }}" class="nav-item-link">
+          <i class="fa-solid fa-calendar-week"></i>
+          <span>Weekly Summary</span>
+        </a>
+        <a href="{{ url_for('monthly_summary') }}" class="nav-item-link">
+          <i class="fa-solid fa-calendar-days"></i>
+          <span>Monthly Summary</span>
         </a>
       </nav>
     </div>
 
+    <!-- User Profile Widget & Logout -->
     <div class="sidebar-footer">
       <div class="user-profile-widget">
         <div class="avatar-circle">
@@ -63,13 +74,13 @@
   <!-- Main Content Area -->
   <div class="app-main">
     
-    <!-- Top Header -->
+    <!-- Top Header Bar -->
     <header class="app-header">
       <div class="header-left">
         <button class="mobile-nav-toggle" id="sidebarToggle" aria-label="Toggle Navigation">
           <i class="fa-solid fa-bars"></i>
         </button>
-        <h1 class="header-title">Athlete Health & Injury Prediction</h1>
+        <h1 class="header-title">Dashboard</h1>
       </div>
 
       <div class="header-right">
@@ -78,9 +89,16 @@
           <span>AI ENGINE ACTIVE</span>
         </div>
 
-        <a href="#" class="header-action-icon" title="Notifications">
+        <a href="#" class="header-action-icon" title="Notifications" aria-label="Notifications">
           <i class="fa-regular fa-bell"></i>
         </a>
+
+        <div class="d-flex align-items-center gap-2 ms-2">
+          <div class="avatar-circle" style="width: 36px; height: 36px; font-size: 0.9rem;">
+            {{ user.full_name[0] | upper }}
+          </div>
+          <span class="d-none d-md-inline text-dark fw-semibold fs-7">{{ user.full_name }}</span>
+        </div>
 
         <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
           <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
@@ -88,242 +106,337 @@
       </div>
     </header>
 
-    <!-- Dashboard Main Body -->
+    <!-- Dashboard Main Content -->
     <main class="dashboard-content">
       
-      <!-- Flash Messages -->
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-custom shadow-sm" role="alert">
-              <i class="fa-solid fa-circle-check fs-5"></i>
-              <div>{{ message }}</div>
-              <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+      <!-- Welcome Hero Section -->
+      <div class="athlete-hero-banner mb-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <h2 class="banner-greeting">Welcome back, {{ user.full_name }} 👋</h2>
+            <p class="banner-subtitle mb-2">Monitor your health and stay ahead of injury risk.</p>
+            <div class="d-flex align-items-center gap-2 text-white-50 fs-7">
+              <i class="fa-regular fa-calendar text-info"></i>
+              <span id="currentDateDisplay">Thursday, 13 August 2026</span>
             </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-
-      <!-- Hero Greeting Banner -->
-      <section class="athlete-hero-banner">
-        <h2 class="banner-greeting">Welcome back, {{ user.full_name }}! 👋</h2>
-        <p class="banner-subtitle">
-          Your AI-powered injury risk prediction is currently <strong>Low (12%)</strong>. Neuromuscular readiness is optimal at 94%.
-        </p>
-
-        <div class="banner-stats-row">
-          <div class="banner-stat-item">
-            <span class="banner-stat-val">94%</span>
-            <span class="banner-stat-lbl">Readiness Score</span>
           </div>
-          <div class="banner-stat-item">
-            <span class="banner-stat-val">42.5 km</span>
-            <span class="banner-stat-lbl">Weekly Distance</span>
-          </div>
-          <div class="banner-stat-item">
-            <span class="banner-stat-val">{{ user.primary_sport }}</span>
-            <span class="banner-stat-lbl">Primary Discipline</span>
-          </div>
-          <div class="banner-stat-item">
-            <span class="banner-stat-val">12%</span>
-            <span class="banner-stat-lbl">Injury Risk Level</span>
+          <div>
+            <a href="{{ url_for('daily_monitoring') }}" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-3 shadow-sm">
+              <i class="fa-solid fa-plus-circle me-2"></i> Start Daily Monitoring
+            </a>
           </div>
         </div>
-      </section>
-
-      <!-- Row 1: Explainable AI Injury Risk Prediction & Real-Time Biometrics -->
-      <div class="row g-4 mb-4">
-        
-        <!-- Explainable Injury Risk Card -->
-        <div class="col-lg-7">
-          <div class="card-master">
-            <div class="card-header-master">
-              <h3 class="card-title-master">
-                <i class="fa-solid fa-shield-virus"></i> Explainable Injury Risk Prediction
-              </h3>
-              <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold fs-7">
-                <i class="fa-solid fa-check-circle me-1"></i> Low Risk (12%)
-              </span>
-            </div>
-
-            <!-- Risk Circle Gauge & Details -->
-            <div class="risk-meter-container">
-              <div class="risk-circle-gauge">
-                <div class="risk-circle-inner">
-                  <span class="risk-number">12%</span>
-                  <span class="risk-label">Risk</span>
-                </div>
-              </div>
-              <div class="risk-text-details">
-                <h4>Optimal Condition Detected</h4>
-                <p>
-                  AthleteGuard AI model has analyzed your biomechanical fatigue, training volume, and stride symmetry. No acute injury risks detected.
-                </p>
-              </div>
-            </div>
-
-            <!-- Explainable Feature Importance Breakdown -->
-            <h5 class="fw-bold fs-6 text-dark mb-3">AI Model Feature Importance Breakdown</h5>
-            <div class="feature-importance-list">
-              {% for factor in data.risk_factors %}
-              <div class="feature-item-row">
-                <div class="feature-item-header">
-                  <span>{{ factor.name }}</span>
-                  <span class="fw-bold">{{ factor.percentage }}%</span>
-                </div>
-                <div class="feature-progress-track">
-                  <div class="feature-progress-bar bg-primary" style="width: {{ factor.percentage }}%;"></div>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Biometrics & Vital Statistics Card -->
-        <div class="col-lg-5">
-          <div class="card-master">
-            <div class="card-header-master">
-              <h3 class="card-title-master">
-                <i class="fa-solid fa-heart-pulse"></i> Real-Time Biometrics
-              </h3>
-              <span class="text-muted fs-7 font-monospace">LIVE DATA</span>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-6">
-                <div class="stat-widget">
-                  <div class="stat-icon-box stat-icon-red">
-                    <i class="fa-solid fa-heart"></i>
-                  </div>
-                  <div>
-                    <div class="stat-value">{{ data.heart_rate }}</div>
-                    <div class="stat-title">Resting HR (bpm)</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-6">
-                <div class="stat-widget">
-                  <div class="stat-icon-box stat-icon-blue">
-                    <i class="fa-solid fa-lungs"></i>
-                  </div>
-                  <div>
-                    <div class="stat-value">{{ data.vo2_max }}</div>
-                    <div class="stat-title">VO2 Max (ml/kg)</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-6">
-                <div class="stat-widget">
-                  <div class="stat-icon-box stat-icon-purple">
-                    <i class="fa-solid fa-battery-three-quarters"></i>
-                  </div>
-                  <div>
-                    <div class="stat-value">{{ data.fatigue_index }}%</div>
-                    <div class="stat-title">Fatigue Index</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-6">
-                <div class="stat-widget">
-                  <div class="stat-icon-box stat-icon-green">
-                    <i class="fa-solid fa-shoe-prints"></i>
-                  </div>
-                  <div>
-                    <div class="stat-value">{{ data.stride_length }} m</div>
-                    <div class="stat-title">Stride Length</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Health Summary Widget -->
-            <div class="p-3 bg-light rounded-3 border mt-4">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="fw-bold fs-7 text-uppercase text-muted">Neuromuscular Status</span>
-                <span class="badge bg-success">Optimal (94%)</span>
-              </div>
-              <div class="progress" style="height: 6px;">
-                <div class="progress-bar bg-success" style="width: 94%"></div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
       </div>
 
-      <!-- Row 2: AI Recommendations & Recent Training Sessions -->
-      <div class="row g-4">
+      <!-- Loading State Spinner Overlay -->
+      <div id="dashboardLoading" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+          <span class="visually-hidden">Loading Dashboard Data...</span>
+        </div>
+        <p class="text-muted mt-3 fw-medium fs-6">Retrieving latest injury risk analytics...</p>
+      </div>
+
+      <!-- Professional Error State Banner -->
+      <div id="dashboardErrorBanner" class="alert alert-danger shadow-sm border-0 rounded-3 mb-4" style="display: none;" role="alert">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-3">
+            <i class="fa-solid fa-triangle-exclamation fs-3"></i>
+            <div>
+              <h5 class="fw-bold mb-1">Unable to load your dashboard data</h5>
+              <p class="mb-0 fs-7 opacity-75">There was a temporary issue connecting to the server. Please try again.</p>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-sm px-3 fw-semibold rounded-pill" onclick="retryDashboardFetch()">
+            <i class="fa-solid fa-rotate-right me-1"></i> Try Again
+          </button>
+        </div>
+      </div>
+
+      <!-- Professional Empty State -->
+      <div id="dashboardEmptyState" class="empty-state-container mb-4" style="display: none;">
+        <div class="empty-state-icon">
+          <i class="fa-solid fa-notes-medical"></i>
+        </div>
+        <h3 class="empty-state-title">No predictions yet</h3>
+        <p class="empty-state-text">Complete your first daily health assessment to receive your injury-risk prediction and personalized recommendations.</p>
+        <a href="{{ url_for('daily_monitoring') }}" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm">
+          <i class="fa-solid fa-notes-medical me-2"></i> Start Health Assessment
+        </a>
+      </div>
+
+      <!-- Main Statistics & Analytics Grid -->
+      <div id="dashboardMainGrid">
         
-        <!-- AI Performance Recommendations -->
-        <div class="col-lg-6">
-          <div class="card-master">
-            <div class="card-header-master">
-              <h3 class="card-title-master">
-                <i class="fa-solid fa-bolt text-warning"></i> AI Performance Insights
-              </h3>
-              <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1 fw-semibold">
-                Updated Just Now
-              </span>
-            </div>
-
-            <div class="ai-recommendations-wrapper">
-              {% for item in data.ai_recommendations %}
-              <div class="ai-recommendation-item">
-                <div class="ai-item-title">
-                  <span>{{ item.title }}</span>
-                  <span class="badge bg-{{ item.type }} fs-8">{{ item.tag }}</span>
-                </div>
-                <p class="ai-item-desc">{{ item.desc }}</p>
+        <!-- 4 Statistics Cards Section -->
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6 col-lg-3">
+            <div class="stat-card-widget">
+              <div class="stat-icon-wrapper stat-icon-green">
+                <i class="fa-solid fa-heart-pulse"></i>
               </div>
-              {% endfor %}
+              <div>
+                <span class="stat-card-lbl">Current Risk</span>
+                <div class="stat-card-val text-success" id="statRiskPercent">18%</div>
+                <div class="stat-card-sub">LOW RISK</div>
+              </div>
             </div>
+          </div>
 
+          <div class="col-sm-6 col-lg-3">
+            <div class="stat-card-widget">
+              <div class="stat-icon-wrapper stat-icon-blue">
+                <i class="fa-solid fa-chart-pie"></i>
+              </div>
+              <div>
+                <span class="stat-card-lbl">Total Predictions</span>
+                <div class="stat-card-val" id="statTotalPredictions">12</div>
+                <div class="stat-card-sub">Last 30 days</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-sm-6 col-lg-3">
+            <div class="stat-card-widget">
+              <div class="stat-icon-wrapper stat-icon-purple">
+                <i class="fa-solid fa-bed"></i>
+              </div>
+              <div>
+                <span class="stat-card-lbl">Avg Sleep</span>
+                <div class="stat-card-val" id="statAvgSleep">7.4 hrs</div>
+                <div class="stat-card-sub">Optimal target</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-sm-6 col-lg-3">
+            <div class="stat-card-widget">
+              <div class="stat-icon-wrapper stat-icon-amber">
+                <i class="fa-solid fa-stopwatch"></i>
+              </div>
+              <div>
+                <span class="stat-card-lbl">Avg Training</span>
+                <div class="stat-card-val" id="statAvgTraining">3.2 hrs</div>
+                <div class="stat-card-sub">Daily workload</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Recent Training Sessions Table -->
-        <div class="col-lg-6">
-          <div class="card-master">
-            <div class="card-header-master">
-              <h3 class="card-title-master">
-                <i class="fa-solid fa-clock-rotate-left"></i> Recent Session Logs
-              </h3>
-              <a href="#" class="form-link fs-7">View All Logs →</a>
+        <!-- Prominent Risk Gauge Card & Today's Summary Row -->
+        <div class="row g-4 mb-4">
+          
+          <!-- Current Risk Card -->
+          <div class="col-lg-7">
+            <div class="card-master">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-shield-cat"></i> Current Injury Risk Score
+                </h3>
+                <span class="badge bg-success" id="riskLevelBadge">Low Risk (18%)</span>
+              </div>
+
+              <div class="risk-meter-container">
+                <div class="risk-circle-gauge" id="riskCircleGauge">
+                  <div class="risk-circle-inner">
+                    <span class="risk-number" id="riskGaugeNumber">18%</span>
+                    <span class="risk-label">INJURY RISK</span>
+                  </div>
+                </div>
+
+                <div class="risk-text-details">
+                  <h4>Optimal Readiness Detected</h4>
+                  <p class="mb-2">Your Random Forest machine learning risk evaluation is within the safe zone. Maintain current sleep and recovery routines.</p>
+                  <div class="d-flex align-items-center gap-2 text-muted fs-7">
+                    <i class="fa-regular fa-clock"></i>
+                    <span>Last Prediction: <strong class="text-dark">12 August 2026</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Today's Health Summary Card -->
+          <div class="col-lg-5">
+            <div class="card-master">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-heart-circle-check"></i> Today's Health Overview
+                </h3>
+                <span class="badge bg-light text-dark border">Latest Entry</span>
+              </div>
+
+              <div class="row g-2 fs-7">
+                <div class="col-6 p-2 bg-light rounded-2 border text-center">
+                  <span class="text-muted d-block fs-8 text-uppercase">Sleep</span>
+                  <strong class="text-dark fs-6">7.2 hrs</strong>
+                </div>
+                <div class="col-6 p-2 bg-light rounded-2 border text-center">
+                  <span class="text-muted d-block fs-8 text-uppercase">Training</span>
+                  <strong class="text-dark fs-6">3.5 hrs</strong>
+                </div>
+                <div class="col-6 p-2 bg-light rounded-2 border text-center">
+                  <span class="text-muted d-block fs-8 text-uppercase">Heart Rate</span>
+                  <strong class="text-dark fs-6">72 bpm</strong>
+                </div>
+                <div class="col-6 p-2 bg-light rounded-2 border text-center">
+                  <span class="text-muted d-block fs-8 text-uppercase">Fatigue</span>
+                  <strong class="text-success fs-6">Low</strong>
+                </div>
+                <div class="col-6 p-2 bg-light rounded-2 border text-center">
+                  <span class="text-muted d-block fs-8 text-uppercase">Stress</span>
+                  <strong class="text-warning fs-6">Moderate</strong>
+                </div>
+                <div class="col-6 p-2 bg-light rounded-2 border text-center">
+                  <span class="text-muted d-block fs-8 text-uppercase">Prev Injury</span>
+                  <strong class="text-dark fs-6">No</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Health Trends Line Chart & Risk Distribution Doughnut Row -->
+        <div class="row g-4 mb-4">
+          
+          <!-- Health Trends Line Chart Card -->
+          <div class="col-lg-8">
+            <div class="card-master">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-chart-line"></i> Health Trends
+                </h3>
+                <div class="btn-group" role="group" aria-label="Time Filter">
+                  <button type="button" id="filter7Days" class="btn btn-sm btn-primary active">7 Days</button>
+                  <button type="button" id="filter30Days" class="btn btn-sm btn-outline-secondary">30 Days</button>
+                </div>
+              </div>
+
+              <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="healthTrendsChartCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk Distribution Doughnut Chart Card -->
+          <div class="col-lg-4">
+            <div class="card-master">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-chart-pie"></i> Risk Distribution
+                </h3>
+                <span class="badge bg-light text-dark border">30 Days</span>
+              </div>
+
+              <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="riskDistributionChartCanvas"></canvas>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Recent Predictions Table Card -->
+        <div class="card-master mb-4">
+          <div class="card-header-master">
+            <h3 class="card-title-master">
+              <i class="fa-solid fa-list-check"></i> Recent Predictions
+            </h3>
+            <a href="{{ url_for('prediction_history') }}" class="btn btn-link btn-sm text-decoration-none fw-semibold">
+              View All Predictions →
+            </a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Risk Level</th>
+                  <th>Risk %</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>12 Aug 2026</td>
+                  <td><span class="badge-risk-low">Low</span></td>
+                  <td class="fw-bold text-success">18%</td>
+                  <td><span class="badge bg-light text-dark border">Completed</span></td>
+                </tr>
+                <tr>
+                  <td>10 Aug 2026</td>
+                  <td><span class="badge-risk-medium">Medium</span></td>
+                  <td class="fw-bold text-warning">54%</td>
+                  <td><span class="badge bg-light text-dark border">Completed</span></td>
+                </tr>
+                <tr>
+                  <td>07 Aug 2026</td>
+                  <td><span class="badge-risk-low">Low</span></td>
+                  <td class="fw-bold text-success">21%</td>
+                  <td><span class="badge bg-light text-dark border">Completed</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Actions Section -->
+        <div class="card-master">
+          <div class="card-header-master">
+            <h3 class="card-title-master">
+              <i class="fa-solid fa-bolt"></i> Quick Actions
+            </h3>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-sm-6 col-md-3">
+              <a href="{{ url_for('daily_monitoring') }}" class="quick-action-card">
+                <div class="quick-action-icon">
+                  <i class="fa-solid fa-notes-medical"></i>
+                </div>
+                <div>
+                  <div class="quick-action-title">Daily Monitoring</div>
+                  <div class="quick-action-sub">Record health metrics</div>
+                </div>
+              </a>
             </div>
 
-            <div class="table-responsive">
-              <table class="custom-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Activity Type</th>
-                    <th>Duration</th>
-                    <th>Distance</th>
-                    <th>Injury Risk</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for session_item in data.recent_sessions %}
-                  <tr>
-                    <td class="fw-semibold">{{ session_item.date }}</td>
-                    <td>{{ session_item.type }}</td>
-                    <td>{{ session_item.duration }}</td>
-                    <td>{{ session_item.distance }}</td>
-                    <td>
-                      <span class="badge-risk-low">{{ session_item.risk }}</span>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
+            <div class="col-sm-6 col-md-3">
+              <a href="{{ url_for('prediction_history') }}" class="quick-action-card">
+                <div class="quick-action-icon">
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                  <div class="quick-action-title">Prediction History</div>
+                  <div class="quick-action-sub">View past assessments</div>
+                </div>
+              </a>
             </div>
 
+            <div class="col-sm-6 col-md-3">
+              <a href="{{ url_for('weekly_summary') }}" class="quick-action-card">
+                <div class="quick-action-icon">
+                  <i class="fa-solid fa-calendar-week"></i>
+                </div>
+                <div>
+                  <div class="quick-action-title">Weekly Summary</div>
+                  <div class="quick-action-sub">7-day trends & load</div>
+                </div>
+              </a>
+            </div>
+
+            <div class="col-sm-6 col-md-3">
+              <a href="{{ url_for('profile') }}" class="quick-action-card">
+                <div class="quick-action-icon">
+                  <i class="fa-regular fa-user"></i>
+                </div>
+                <div>
+                  <div class="quick-action-title">View Profile</div>
+                  <div class="quick-action-sub">Manage athlete data</div>
+                </div>
+              </a>
+            </div>
           </div>
         </div>
 

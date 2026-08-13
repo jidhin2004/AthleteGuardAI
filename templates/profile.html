@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Athlete Profile - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <!-- Sidebar Navigation -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge">AI POWERED</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item-link">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('profile') }}" class="nav-item-link active">
+          <i class="fa-regular fa-user"></i>
+          <span>Profile</span>
+        </a>
+        <a href="{{ url_for('medical_history') }}" class="nav-item-link">
+          <i class="fa-solid fa-notes-medical"></i>
+          <span>Medical History</span>
+        </a>
+        <a href="{{ url_for('daily_monitoring') }}" class="nav-item-link">
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>Daily Health Monitoring</span>
+        </a>
+        <a href="{{ url_for('prediction_history') }}" class="nav-item-link">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Prediction History</span>
+        </a>
+        <a href="{{ url_for('weekly_summary') }}" class="nav-item-link">
+          <i class="fa-solid fa-calendar-week"></i>
+          <span>Weekly Summary</span>
+        </a>
+        <a href="{{ url_for('monthly_summary') }}" class="nav-item-link">
+          <i class="fa-solid fa-calendar-days"></i>
+          <span>Monthly Summary</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle">
+          {{ user.full_name[0] | upper }}
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge">{{ user.primary_sport }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Sign Out">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="app-main">
+    
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-nav-toggle" id="sidebarToggle" aria-label="Toggle Navigation">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="header-title">Athlete Profile Management</h1>
+      </div>
+
+      <div class="header-right">
+        <div class="status-pill-active">
+          <span class="pulse-dot"></span>
+          <span>AI ENGINE ACTIVE</span>
+        </div>
+
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
+      </div>
+    </header>
+
+    <main class="dashboard-content">
+      <div class="card-master mb-4">
+        <div class="card-header-master">
+          <h3 class="card-title-master"><i class="fa-regular fa-user"></i> Personal & Athletic Information</h3>
+          <span class="badge bg-primary">Semester 3 Module</span>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6">
+            <label class="form-label text-muted">Full Name</label>
+            <input type="text" class="form-control" value="{{ user.full_name }}" readonly>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label text-muted">Email Address</label>
+            <input type="email" class="form-control" value="{{ user.email }}" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted">Age</label>
+            <input type="text" class="form-control" value="{{ user.age }} years" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted">Gender</label>
+            <input type="text" class="form-control" value="{{ user.gender }}" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-muted">Primary Discipline</label>
+            <input type="text" class="form-control" value="{{ user.primary_sport }}" readonly>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+</div>
+{% endblock %}

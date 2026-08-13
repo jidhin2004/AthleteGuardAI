@@ -56,7 +56,6 @@ def index():
     return render_template('index.html')
 
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login handler with password verification and session management."""
@@ -171,36 +170,137 @@ def dashboard():
         session.clear()
         return redirect(url_for('login'))
 
-    # Explainable AI & Biometric Metrics for the Athlete
+    # Initial context for template rendering
     dashboard_data = {
-        'injury_risk_percent': 12,
+        'injury_risk_percent': 18,
         'risk_level': 'Low Risk',
         'risk_badge_color': 'success',
-        'readiness_score': 94,
-        'fatigue_index': 18,
-        'heart_rate': 68,
-        'vo2_max': 58.4,
-        'stride_length': 1.24,
-        'ground_contact': 208,
-        'weekly_distance_km': 42.5,
-        'risk_factors': [
-            {'name': 'Hamstring Strain Risk', 'percentage': 14, 'status': 'Optimal'},
-            {'name': 'ACL Stress Index', 'percentage': 8, 'status': 'Safe'},
-            {'name': 'Workload Spike Factor', 'percentage': 18, 'status': 'Moderate'},
-            {'name': 'Asymmetry Index', 'percentage': 5, 'status': 'Optimal'}
-        ],
-        'ai_recommendations': [
-            {'title': 'Optimal Load Limit', 'desc': 'Keep intense sprint training capped at 45 mins today to maintain low hamstring risk.', 'tag': 'AI Insight', 'type': 'info'},
-            {'title': 'Hydration & Recovery', 'desc': 'Neuromuscular readiness is at 94%. Recommended post-workout mobility routine attached.', 'tag': 'Recovery', 'type': 'success'}
-        ],
-        'recent_sessions': [
-            {'date': 'Today, 08:30 AM', 'type': 'High Intensity Sprint', 'duration': '45 min', 'distance': '8.2 km', 'risk': '12% Low'},
-            {'date': 'Yesterday', 'type': 'Tempo Endurance Run', 'duration': '60 min', 'distance': '12.5 km', 'risk': '15% Low'},
-            {'date': '05 Aug 2026', 'type': 'Recovery & Mobility', 'duration': '30 min', 'distance': '3.0 km', 'risk': '5% Low'}
-        ]
+        'last_prediction_date': '12 August 2026',
+        'total_predictions': 12,
+        'avg_sleep': 7.4,
+        'avg_training': 3.2,
+        'has_predictions': True
     }
 
     return render_template('dashboard.html', user=user, data=dashboard_data)
+
+
+# ==========================================
+# SEMESTER 3 MODULE ROUTES (PROTECTED)
+# ==========================================
+
+@app.route('/profile')
+@login_required
+def profile():
+    """Athlete Profile Management Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('profile.html', user=user)
+
+
+@app.route('/medical-history')
+@login_required
+def medical_history():
+    """Medical History Management Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('medical_history.html', user=user)
+
+
+@app.route('/daily-monitoring')
+@login_required
+def daily_monitoring():
+    """Daily Health Monitoring Form Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('daily_monitoring.html', user=user)
+
+
+@app.route('/prediction-history')
+@login_required
+def prediction_history():
+    """Prediction History Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('prediction_history.html', user=user)
+
+
+@app.route('/weekly-summary')
+@login_required
+def weekly_summary():
+    """Weekly Summary Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('weekly_summary.html', user=user)
+
+
+@app.route('/monthly-summary')
+@login_required
+def monthly_summary():
+    """Monthly Summary Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('monthly_summary.html', user=user)
+
+
+# ==========================================
+# DECOUPLED API LAYER FOR DASHBOARD DATA
+# ==========================================
+
+@app.route('/api/dashboard-data')
+@login_required
+def get_dashboard_data():
+    """API endpoint providing decoupled dashboard statistics, trends, and risk distributions."""
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    payload = {
+        'status': 'success',
+        'has_predictions': True,
+        'user': {
+            'id': user.id,
+            'full_name': user.full_name,
+            'primary_sport': user.primary_sport
+        },
+        'stats': {
+            'injury_risk_percent': 18,
+            'risk_level': 'LOW',
+            'risk_badge_color': 'success',
+            'total_predictions': 12,
+            'avg_sleep_hrs': 7.4,
+            'avg_training_hrs': 3.2,
+            'last_prediction_date': '12 Aug 2026'
+        },
+        'health_trends': {
+            '7_days': {
+                'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                'sleep': [7.5, 7.0, 7.8, 6.9, 7.4, 8.1, 7.2],
+                'training': [3.0, 3.5, 2.5, 4.0, 3.2, 2.0, 3.5],
+                'resting_hr': [66, 68, 65, 71, 67, 64, 68]
+            },
+            '30_days': {
+                'labels': ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                'sleep': [7.2, 7.5, 7.3, 7.6],
+                'training': [3.1, 3.4, 3.0, 3.3],
+                'resting_hr': [67, 66, 68, 65]
+            }
+        },
+        'risk_distribution': {
+            'labels': ['Low Risk', 'Medium Risk', 'High Risk'],
+            'counts': [7, 3, 2],
+            'colors': ['#22c55e', '#f59e0b', '#ef4444']
+        },
+        'recent_predictions': [
+            {'date': '12 Aug 2026', 'risk_level': 'Low', 'risk_percent': 18, 'status': 'Completed', 'badge_class': 'success'},
+            {'date': '10 Aug 2026', 'risk_level': 'Medium', 'risk_percent': 54, 'status': 'Completed', 'badge_class': 'warning'},
+            {'date': '07 Aug 2026', 'risk_level': 'Low', 'risk_percent': 21, 'status': 'Completed', 'badge_class': 'success'}
+        ],
+        'todays_health_overview': {
+            'sleep_hrs': '7.2 hrs',
+            'training_hrs': '3.5 hrs',
+            'heart_rate': '72 bpm',
+            'fatigue': 'Low',
+            'stress': 'Moderate',
+            'previous_injury': 'No'
+        }
+    }
+
+    return jsonify(payload)
 
 
 if __name__ == '__main__':

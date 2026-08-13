@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Prediction History - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm"><i class="fa-solid fa-shield-halved"></i></div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge">AI POWERED</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item-link"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('profile') }}" class="nav-item-link"><i class="fa-regular fa-user"></i><span>Profile</span></a>
+        <a href="{{ url_for('medical_history') }}" class="nav-item-link"><i class="fa-solid fa-notes-medical"></i><span>Medical History</span></a>
+        <a href="{{ url_for('daily_monitoring') }}" class="nav-item-link"><i class="fa-solid fa-calendar-check"></i><span>Daily Health Monitoring</span></a>
+        <a href="{{ url_for('prediction_history') }}" class="nav-item-link active"><i class="fa-solid fa-clock-rotate-left"></i><span>Prediction History</span></a>
+        <a href="{{ url_for('weekly_summary') }}" class="nav-item-link"><i class="fa-solid fa-calendar-week"></i><span>Weekly Summary</span></a>
+        <a href="{{ url_for('monthly_summary') }}" class="nav-item-link"><i class="fa-solid fa-calendar-days"></i><span>Monthly Summary</span></a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle">{{ user.full_name[0] | upper }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge">{{ user.primary_sport }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link"><i class="fa-solid fa-right-from-bracket"></i></a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-nav-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+        <h1 class="header-title">Historical Injury Risk Predictions</h1>
+      </div>
+      <div class="header-right">
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2"><i class="fa-solid fa-sign-out-alt me-1"></i> Logout</a>
+      </div>
+    </header>
+
+    <main class="dashboard-content">
+      <div class="card-master mb-4">
+        <div class="card-header-master">
+          <h3 class="card-title-master"><i class="fa-solid fa-clock-rotate-left"></i> All Prediction Records</h3>
+          <span class="badge bg-primary">Total: 12 Records</span>
+        </div>
+        
+        <div class="table-responsive mt-3">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Sleep</th>
+                <th>Training</th>
+                <th>Resting HR</th>
+                <th>Fatigue</th>
+                <th>Risk Level</th>
+                <th>Risk %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>12 Aug 2026</td>
+                <td>7.5 hrs</td>
+                <td>3.0 hrs</td>
+                <td>68 bpm</td>
+                <td>Low</td>
+                <td><span class="badge bg-success">Low Risk</span></td>
+                <td class="fw-bold text-success">18%</td>
+                <td><span class="badge bg-secondary">Completed</span></td>
+              </tr>
+              <tr>
+                <td>10 Aug 2026</td>
+                <td>6.0 hrs</td>
+                <td>4.5 hrs</td>
+                <td>74 bpm</td>
+                <td>High</td>
+                <td><span class="badge bg-warning text-dark">Medium Risk</span></td>
+                <td class="fw-bold text-warning">54%</td>
+                <td><span class="badge bg-secondary">Completed</span></td>
+              </tr>
+              <tr>
+                <td>07 Aug 2026</td>
+                <td>8.0 hrs</td>
+                <td>2.5 hrs</td>
+                <td>65 bpm</td>
+                <td>Low</td>
+                <td><span class="badge bg-success">Low Risk</span></td>
+                <td class="fw-bold text-success">21%</td>
+                <td><span class="badge bg-secondary">Completed</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+</div>
+{% endblock %}
