@@ -84,9 +84,10 @@
       </div>
 
       <div class="header-right">
+        <!-- Dynamic ML Model Status Indicator -->
         <div class="status-pill-active">
           <span class="pulse-dot"></span>
-          <span>AI ENGINE ACTIVE</span>
+          <span id="headerModelStatus">Random Forest Model Active</span>
         </div>
 
         <a href="#" class="header-action-icon" title="Notifications" aria-label="Notifications">
@@ -142,8 +143,8 @@
           <div class="d-flex align-items-center gap-3">
             <i class="fa-solid fa-triangle-exclamation fs-3"></i>
             <div>
-              <h5 class="fw-bold mb-1">Unable to load your dashboard data</h5>
-              <p class="mb-0 fs-7 opacity-75">There was a temporary issue connecting to the server. Please try again.</p>
+              <h5 class="fw-bold mb-1">Unable to load dashboard data</h5>
+              <p class="mb-0 fs-7 opacity-75">Please try again.</p>
             </div>
           </div>
           <button class="btn btn-danger btn-sm px-3 fw-semibold rounded-pill" onclick="retryDashboardFetch()">
@@ -157,8 +158,8 @@
         <div class="empty-state-icon">
           <i class="fa-solid fa-notes-medical"></i>
         </div>
-        <h3 class="empty-state-title">No predictions yet</h3>
-        <p class="empty-state-text">Complete your first daily health assessment to receive your injury-risk prediction and personalized recommendations.</p>
+        <h3 class="empty-state-title">No injury predictions yet</h3>
+        <p class="empty-state-text">Complete your first daily health assessment to receive an injury-risk prediction.</p>
         <a href="{{ url_for('daily_monitoring') }}" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm">
           <i class="fa-solid fa-notes-medical me-2"></i> Start Health Assessment
         </a>
@@ -177,7 +178,7 @@
               <div>
                 <span class="stat-card-lbl">Current Risk</span>
                 <div class="stat-card-val text-success" id="statRiskPercent">18%</div>
-                <div class="stat-card-sub">LOW RISK</div>
+                <div class="stat-card-sub">Low Risk • Latest prediction</div>
               </div>
             </div>
           </div>
@@ -203,7 +204,7 @@
               <div>
                 <span class="stat-card-lbl">Avg Sleep</span>
                 <div class="stat-card-val" id="statAvgSleep">7.4 hrs</div>
-                <div class="stat-card-sub">Optimal target</div>
+                <div class="stat-card-sub">Based on recent entries</div>
               </div>
             </div>
           </div>
@@ -216,23 +217,23 @@
               <div>
                 <span class="stat-card-lbl">Avg Training</span>
                 <div class="stat-card-val" id="statAvgTraining">3.2 hrs</div>
-                <div class="stat-card-sub">Daily workload</div>
+                <div class="stat-card-sub">Average daily workload</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Prominent Risk Gauge Card & Today's Summary Row -->
+        <!-- Prominent Risk Score Card & Today's Health Overview Row -->
         <div class="row g-4 mb-4">
           
-          <!-- Current Risk Card -->
+          <!-- Current Injury Risk Score Card -->
           <div class="col-lg-7">
             <div class="card-master">
               <div class="card-header-master">
                 <h3 class="card-title-master">
-                  <i class="fa-solid fa-shield-cat"></i> Current Injury Risk Score
+                  <i class="fa-solid fa-shield-halved"></i> Current Injury Risk Score
                 </h3>
-                <span class="badge bg-success" id="riskLevelBadge">Low Risk (18%)</span>
+                <span class="badge bg-success" id="riskLevelBadge">LOW RISK</span>
               </div>
 
               <div class="risk-meter-container">
@@ -244,18 +245,45 @@
                 </div>
 
                 <div class="risk-text-details">
-                  <h4>Optimal Readiness Detected</h4>
-                  <p class="mb-2">Your Random Forest machine learning risk evaluation is within the safe zone. Maintain current sleep and recovery routines.</p>
+                  <h4 id="riskHeadingText">Low Injury Risk Detected</h4>
+                  <p class="mb-2">Based on the latest health monitoring data and Random Forest prediction.</p>
                   <div class="d-flex align-items-center gap-2 text-muted fs-7">
                     <i class="fa-regular fa-clock"></i>
-                    <span>Last Prediction: <strong class="text-dark">12 August 2026</strong></span>
+                    <span>Last Prediction: <strong class="text-dark" id="riskLastPredictionDate">13 August 2026</strong></span>
                   </div>
                 </div>
               </div>
+
+              <!-- Prediction Summary Component -->
+              <div class="prediction-summary-box">
+                <div class="prediction-summary-grid">
+                  <div class="prediction-summary-item">
+                    <span class="prediction-summary-lbl">Risk Level</span>
+                    <span class="prediction-summary-val text-success" id="summaryRiskLevel">Low</span>
+                  </div>
+
+                  <div class="prediction-summary-item">
+                    <span class="prediction-summary-lbl">Risk Score</span>
+                    <span class="prediction-summary-val" id="summaryRiskScore">18%</span>
+                  </div>
+
+                  <div class="prediction-summary-item">
+                    <span class="prediction-summary-lbl">Predicted On</span>
+                    <span class="prediction-summary-val" id="summaryPredictedOn">13 Aug 2026</span>
+                  </div>
+
+                  <div>
+                    <a href="{{ url_for('prediction_history') }}" class="btn btn-link btn-sm text-decoration-none p-0 fw-semibold">
+                      View Prediction Details →
+                    </a>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
 
-          <!-- Today's Health Summary Card -->
+          <!-- Today's Health Overview Card -->
           <div class="col-lg-5">
             <div class="card-master">
               <div class="card-header-master">
@@ -265,31 +293,39 @@
                 <span class="badge bg-light text-dark border">Latest Entry</span>
               </div>
 
-              <div class="row g-2 fs-7">
+              <div id="todaysOverviewContainer" class="row g-2 fs-7">
                 <div class="col-6 p-2 bg-light rounded-2 border text-center">
                   <span class="text-muted d-block fs-8 text-uppercase">Sleep</span>
-                  <strong class="text-dark fs-6">7.2 hrs</strong>
+                  <strong class="text-dark fs-6" id="todaySleepVal">7.4 hrs</strong>
                 </div>
                 <div class="col-6 p-2 bg-light rounded-2 border text-center">
-                  <span class="text-muted d-block fs-8 text-uppercase">Training</span>
-                  <strong class="text-dark fs-6">3.5 hrs</strong>
+                  <span class="text-muted d-block fs-8 text-uppercase">Training Hours</span>
+                  <strong class="text-dark fs-6" id="todayTrainingVal">3.2 hrs</strong>
                 </div>
                 <div class="col-6 p-2 bg-light rounded-2 border text-center">
-                  <span class="text-muted d-block fs-8 text-uppercase">Heart Rate</span>
-                  <strong class="text-dark fs-6">72 bpm</strong>
+                  <span class="text-muted d-block fs-8 text-uppercase">Resting Heart Rate</span>
+                  <strong class="text-dark fs-6" id="todayHeartRateVal">72 bpm</strong>
                 </div>
                 <div class="col-6 p-2 bg-light rounded-2 border text-center">
                   <span class="text-muted d-block fs-8 text-uppercase">Fatigue</span>
-                  <strong class="text-success fs-6">Low</strong>
+                  <strong class="text-success fs-6" id="todayFatigueVal">Low</strong>
                 </div>
                 <div class="col-6 p-2 bg-light rounded-2 border text-center">
                   <span class="text-muted d-block fs-8 text-uppercase">Stress</span>
-                  <strong class="text-warning fs-6">Moderate</strong>
+                  <strong class="text-warning fs-6" id="todayStressVal">Moderate</strong>
                 </div>
                 <div class="col-6 p-2 bg-light rounded-2 border text-center">
-                  <span class="text-muted d-block fs-8 text-uppercase">Prev Injury</span>
-                  <strong class="text-dark fs-6">No</strong>
+                  <span class="text-muted d-block fs-8 text-uppercase">Previous Injury</span>
+                  <strong class="text-dark fs-6" id="todayInjuryVal">No</strong>
                 </div>
+              </div>
+
+              <!-- Fallback View when No Today Data -->
+              <div id="todaysOverviewFallback" class="text-center py-4" style="display: none;">
+                <p class="text-muted fs-7 mb-3">No health data recorded today.</p>
+                <a href="{{ url_for('daily_monitoring') }}" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                  <i class="fa-solid fa-plus me-1"></i> Start Daily Monitoring
+                </a>
               </div>
             </div>
           </div>
@@ -323,7 +359,7 @@
             <div class="card-master">
               <div class="card-header-master">
                 <h3 class="card-title-master">
-                  <i class="fa-solid fa-chart-pie"></i> Risk Distribution
+                  <i class="fa-solid fa-chart-pie"></i> Prediction Risk Distribution
                 </h3>
                 <span class="badge bg-light text-dark border">30 Days</span>
               </div>
@@ -353,26 +389,26 @@
                 <tr>
                   <th>Date</th>
                   <th>Risk Level</th>
-                  <th>Risk %</th>
+                  <th>Risk Score</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>12 Aug 2026</td>
-                  <td><span class="badge-risk-low">Low</span></td>
+                  <td>13 Aug 2026</td>
+                  <td><span class="badge-risk-low"><i class="fa-solid fa-circle text-success fs-8"></i> Low</span></td>
                   <td class="fw-bold text-success">18%</td>
                   <td><span class="badge bg-light text-dark border">Completed</span></td>
                 </tr>
                 <tr>
-                  <td>10 Aug 2026</td>
-                  <td><span class="badge-risk-medium">Medium</span></td>
+                  <td>11 Aug 2026</td>
+                  <td><span class="badge-risk-medium"><i class="fa-solid fa-circle text-warning fs-8"></i> Medium</span></td>
                   <td class="fw-bold text-warning">54%</td>
                   <td><span class="badge bg-light text-dark border">Completed</span></td>
                 </tr>
                 <tr>
-                  <td>07 Aug 2026</td>
-                  <td><span class="badge-risk-low">Low</span></td>
+                  <td>08 Aug 2026</td>
+                  <td><span class="badge-risk-low"><i class="fa-solid fa-circle text-success fs-8"></i> Low</span></td>
                   <td class="fw-bold text-success">21%</td>
                   <td><span class="badge bg-light text-dark border">Completed</span></td>
                 </tr>
@@ -396,7 +432,7 @@
                   <i class="fa-solid fa-notes-medical"></i>
                 </div>
                 <div>
-                  <div class="quick-action-title">Daily Monitoring</div>
+                  <div class="quick-action-title">Daily Health Monitoring</div>
                   <div class="quick-action-sub">Record health metrics</div>
                 </div>
               </a>
@@ -427,13 +463,13 @@
             </div>
 
             <div class="col-sm-6 col-md-3">
-              <a href="{{ url_for('profile') }}" class="quick-action-card">
+              <a href="{{ url_for('monthly_summary') }}" class="quick-action-card">
                 <div class="quick-action-icon">
-                  <i class="fa-regular fa-user"></i>
+                  <i class="fa-solid fa-calendar-days"></i>
                 </div>
                 <div>
-                  <div class="quick-action-title">View Profile</div>
-                  <div class="quick-action-sub">Manage athlete data</div>
+                  <div class="quick-action-title">Monthly Summary</div>
+                  <div class="quick-action-sub">30-day risk analysis</div>
                 </div>
               </a>
             </div>

@@ -43,10 +43,12 @@ async function initDashboardApp() {
   const loadingOverlay = document.getElementById('dashboardLoading');
   const errorBanner = document.getElementById('dashboardErrorBanner');
   const mainContent = document.getElementById('dashboardMainGrid');
+  const emptyState = document.getElementById('dashboardEmptyState');
 
   try {
     if (loadingOverlay) loadingOverlay.style.display = 'block';
     if (errorBanner) errorBanner.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
 
     // Fetch dashboard data from Flask API
     const response = await fetch('/api/dashboard-data');
@@ -56,17 +58,30 @@ async function initDashboardApp() {
     dashboardDataCache = data;
 
     if (loadingOverlay) loadingOverlay.style.display = 'none';
-    if (mainContent) mainContent.style.display = 'block';
+
+    // Update Model Status Indicator in Top Header
+    const modelStatusElem = document.getElementById('headerModelStatus');
+    if (modelStatusElem && data.model_status) {
+      modelStatusElem.textContent = data.model_status;
+    }
 
     // Check if user has predictions
     if (!data.has_predictions) {
-      showEmptyState();
+      if (mainContent) mainContent.style.display = 'none';
+      if (emptyState) emptyState.style.display = 'block';
       return;
     }
 
-    // Populate Statistics Cards & Risk Gauge
+    if (mainContent) mainContent.style.display = 'block';
+
+    // Populate Statistics Cards
     updateStatCards(data.stats);
-    updateRiskGauge(data.stats.injury_risk_percent, data.stats.risk_level);
+
+    // Populate Current Risk Gauge & Prediction Summary
+    updateRiskGauge(data.stats.injury_risk_percent, data.stats.risk_level, data.stats.last_prediction_date, data.risk_summary);
+
+    // Populate Today's Health Overview
+    updateTodaysHealthOverview(data.todays_health_overview);
 
     // Initialize Chart.js Line Chart (Health Trends)
     renderHealthTrendsChart(data.health_trends[currentTrendFilter]);
@@ -80,6 +95,7 @@ async function initDashboardApp() {
   } catch (err) {
     console.error("Dashboard initialization error:", err);
     if (loadingOverlay) loadingOverlay.style.display = 'none';
+    if (mainContent) mainContent.style.display = 'none';
     if (errorBanner) errorBanner.style.display = 'block';
   }
 }
@@ -96,22 +112,33 @@ function updateStatCards(stats) {
   if (trainVal) trainVal.textContent = `${stats.avg_training_hrs} hrs`;
 }
 
-function updateRiskGauge(percent, level) {
+function updateRiskGauge(percent, level, lastDate, summary) {
   const gauge = document.getElementById('riskCircleGauge');
   const numElem = document.getElementById('riskGaugeNumber');
   const badgeElem = document.getElementById('riskLevelBadge');
+  const headingElem = document.getElementById('riskHeadingText');
+  const lastDateElem = document.getElementById('riskLastPredictionDate');
+
+  // Summary box elements
+  const summaryLevel = document.getElementById('summaryRiskLevel');
+  const summaryScore = document.getElementById('summaryRiskScore');
+  const summaryDate = document.getElementById('summaryPredictedOn');
 
   if (numElem) numElem.textContent = `${percent}%`;
+  if (lastDateElem) lastDateElem.textContent = lastDate || '13 August 2026';
 
-  let colorHex = '#22c55e'; // Low (Green)
+  let colorHex = '#22c55e'; // Low Risk (Green)
   let badgeClass = 'badge bg-success';
+  let headingText = 'Low Injury Risk Detected';
 
   if (percent > 65) {
-    colorHex = '#ef4444'; // High (Red)
+    colorHex = '#ef4444'; // High Risk (Red)
     badgeClass = 'badge bg-danger';
+    headingText = 'High Injury Risk Detected';
   } else if (percent > 30) {
-    colorHex = '#f59e0b'; // Medium (Orange)
+    colorHex = '#f59e0b'; // Medium Risk (Orange)
     badgeClass = 'badge bg-warning text-dark';
+    headingText = 'Medium Injury Risk Detected';
   }
 
   if (gauge) {
@@ -121,8 +148,51 @@ function updateRiskGauge(percent, level) {
 
   if (badgeElem) {
     badgeElem.className = badgeClass;
-    badgeElem.textContent = `${level} (${percent}%)`;
+    badgeElem.textContent = `${level.toUpperCase()}`;
   }
+
+  if (headingElem) {
+    headingElem.textContent = headingText;
+    headingElem.style.color = colorHex;
+  }
+
+  // Populate Prediction Summary Box
+  if (summary) {
+    if (summaryLevel) {
+      summaryLevel.textContent = summary.risk_level;
+      summaryLevel.style.color = colorHex;
+    }
+    if (summaryScore) summaryScore.textContent = `${summary.risk_percent}%`;
+    if (summaryDate) summaryDate.textContent = summary.predicted_on;
+  }
+}
+
+function updateTodaysHealthOverview(today) {
+  const container = document.getElementById('todaysOverviewContainer');
+  const fallback = document.getElementById('todaysOverviewFallback');
+
+  if (!today || !today.has_today_data) {
+    if (container) container.style.display = 'none';
+    if (fallback) fallback.style.display = 'block';
+    return;
+  }
+
+  if (container) container.style.display = 'flex';
+  if (fallback) fallback.style.display = 'none';
+
+  const sleepElem = document.getElementById('todaySleepVal');
+  const trainElem = document.getElementById('todayTrainingVal');
+  const hrElem = document.getElementById('todayHeartRateVal');
+  const fatigueElem = document.getElementById('todayFatigueVal');
+  const stressElem = document.getElementById('todayStressVal');
+  const injuryElem = document.getElementById('todayInjuryVal');
+
+  if (sleepElem) sleepElem.textContent = today.sleep_hrs;
+  if (trainElem) trainElem.textContent = today.training_hrs;
+  if (hrElem) hrElem.textContent = today.heart_rate;
+  if (fatigueElem) fatigueElem.textContent = today.fatigue;
+  if (stressElem) stressElem.textContent = today.stress;
+  if (injuryElem) injuryElem.textContent = today.previous_injury;
 }
 
 function renderHealthTrendsChart(trendData) {
@@ -280,14 +350,6 @@ function setupTimeFilterListeners() {
       }
     });
   }
-}
-
-function showEmptyState() {
-  const grid = document.getElementById('dashboardMainGrid');
-  const empty = document.getElementById('dashboardEmptyState');
-
-  if (grid) grid.style.display = 'none';
-  if (empty) empty.style.display = 'block';
 }
 
 function retryDashboardFetch() {

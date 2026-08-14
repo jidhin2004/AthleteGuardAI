@@ -5,6 +5,7 @@
 {% block content %}
 <div class="dashboard-wrapper">
   
+  <!-- Sidebar Navigation -->
   <aside class="app-sidebar" id="appSidebar">
     <div>
       <div class="sidebar-header">
@@ -53,64 +54,556 @@
 
     <div class="sidebar-footer">
       <div class="user-profile-widget">
-        <div class="avatar-circle">{{ user.full_name[0] | upper }}</div>
+        <div class="avatar-circle" id="sidebarAvatarCircle">
+          {% if user.profile_photo %}
+            <img src="{{ user.profile_photo }}" alt="{{ user.full_name }}" id="sidebarAvatarImg">
+          {% else %}
+            <span id="sidebarAvatarInitials">{{ user.initials }}</span>
+          {% endif %}
+        </div>
         <div class="user-info">
           <div class="user-name">{{ user.full_name }}</div>
           <span class="user-sport-badge">{{ user.primary_sport }}</span>
         </div>
-        <a href="{{ url_for('logout') }}" class="logout-btn-link"><i class="fa-solid fa-right-from-bracket"></i></a>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Sign Out">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
       </div>
     </div>
   </aside>
 
+  <!-- Main Content Area -->
   <div class="app-main">
+    
+    <!-- Top Header Bar -->
     <header class="app-header">
       <div class="header-left">
-        <button class="mobile-nav-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
-        <h1 class="header-title">Medical History Records</h1>
+        <button class="mobile-nav-toggle" id="sidebarToggle" aria-label="Toggle Navigation">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div>
+          <h1 class="header-title">Medical History</h1>
+        </div>
       </div>
+
       <div class="header-right">
-        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2"><i class="fa-solid fa-sign-out-alt me-1"></i> Logout</a>
+        <div class="status-pill-active">
+          <span class="pulse-dot"></span>
+          <span>Random Forest Model Active</span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 ms-2">
+          <div class="avatar-circle" id="topbarAvatarCircle" style="width: 36px; height: 36px; font-size: 0.9rem;">
+            {% if user.profile_photo %}
+              <img src="{{ user.profile_photo }}" alt="{{ user.full_name }}">
+            {% else %}
+              <span>{{ user.initials }}</span>
+            {% endif %}
+          </div>
+          <span class="d-none d-md-inline text-dark fw-semibold fs-7">{{ user.full_name }}</span>
+        </div>
+
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
       </div>
     </header>
 
+    <!-- Main Content Container -->
     <main class="dashboard-content">
-      <div class="card-master mb-4">
-        <div class="card-header-master">
-          <h3 class="card-title-master"><i class="fa-solid fa-notes-medical"></i> Previous Injuries & Health History</h3>
-          <button class="btn btn-primary btn-sm rounded-pill"><i class="fa-solid fa-plus me-1"></i> Add Record</button>
-        </div>
-        <p class="text-muted">Maintain previous muscle strains, joint surgeries, allergies, and chronic conditions for Random Forest risk model context.</p>
-        
-        <div class="table-responsive mt-3">
-          <table class="custom-table">
-            <thead>
-              <tr>
-                <th>Condition / Injury</th>
-                <th>Affected Area</th>
-                <th>Year</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="fw-semibold">Hamstring Grade I Strain</td>
-                <td>Right Leg</td>
-                <td>2025</td>
-                <td><span class="badge bg-success">Recovered</span></td>
-              </tr>
-              <tr>
-                <td class="fw-semibold">Ankle Sprain</td>
-                <td>Left Ankle</td>
-                <td>2024</td>
-                <td><span class="badge bg-success">Recovered</span></td>
-              </tr>
-            </tbody>
-          </table>
+      
+      <!-- Subtitle Greeting Banner -->
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+          <h2 class="font-heading fw-bold fs-3 text-dark mb-1">Medical History Records</h2>
+          <p class="text-muted fs-7 mb-0">Maintain your medical and injury history for more accurate injury-risk assessment.</p>
         </div>
       </div>
+
+      <!-- Success & Error Alert Banners -->
+      <div id="medicalSuccessAlert" class="alert alert-success alert-custom shadow-sm border-0 rounded-3" style="display: none;" role="alert">
+        <i class="fa-solid fa-circle-check fs-5"></i>
+        <div class="fw-medium" id="medicalSuccessText">Medical history record saved successfully.</div>
+      </div>
+
+      <div id="medicalErrorAlert" class="alert alert-danger alert-custom shadow-sm border-0 rounded-3" style="display: none;" role="alert">
+        <i class="fa-solid fa-triangle-exclamation fs-5"></i>
+        <div class="fw-medium" id="medicalErrorText">Unable to save the medical history. Please try again.</div>
+      </div>
+
+      <!-- 1. Top Summary Cards Grid (4 Mini Stat Cards) -->
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+          <div class="stat-card-widget">
+            <div class="stat-icon-wrapper stat-icon-amber">
+              <i class="fa-solid fa-user-ninja"></i>
+            </div>
+            <div>
+              <span class="stat-card-lbl">Previous Injuries</span>
+              <div class="stat-card-val" id="summaryInjuriesCount">0</div>
+              <div class="stat-card-sub">Recorded injuries</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="stat-card-widget">
+            <div class="stat-icon-wrapper stat-icon-blue">
+              <i class="fa-solid fa-stethoscope"></i>
+            </div>
+            <div>
+              <span class="stat-card-lbl">Medical Conditions</span>
+              <div class="stat-card-val" id="summaryConditionsCount">0</div>
+              <div class="stat-card-sub">Diagnosed conditions</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="stat-card-widget">
+            <div class="stat-icon-wrapper stat-icon-purple">
+              <i class="fa-solid fa-hand-dots"></i>
+            </div>
+            <div>
+              <span class="stat-card-lbl">Allergies</span>
+              <div class="stat-card-val" id="summaryAllergiesCount">0</div>
+              <div class="stat-card-sub">Known reactions</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="stat-card-widget">
+            <div class="stat-icon-wrapper stat-icon-green">
+              <i class="fa-solid fa-hospital-user"></i>
+            </div>
+            <div>
+              <span class="stat-card-lbl">Surgeries</span>
+              <div class="stat-card-val" id="summarySurgeriesCount">0</div>
+              <div class="stat-card-sub">Surgical history</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Previous Injuries Major Card -->
+      <div class="card-master mb-4">
+        <div class="card-header-master">
+          <h3 class="card-title-master">
+            <i class="fa-solid fa-bone text-danger"></i> Previous Injuries
+          </h3>
+          <button type="button" class="btn btn-primary btn-sm rounded-3 fw-semibold px-3" id="btnOpenAddInjury">
+            <i class="fa-solid fa-plus me-1"></i> Add Injury
+          </button>
+        </div>
+
+        <div id="injuriesContainer" class="row g-3">
+          <!-- Dynamic Injury Cards or Empty State -->
+        </div>
+      </div>
+
+      <!-- 3. Existing Medical Conditions Card -->
+      <div class="card-master mb-4">
+        <div class="card-header-master">
+          <h3 class="card-title-master">
+            <i class="fa-solid fa-file-waveform text-primary"></i> Existing Medical Conditions
+          </h3>
+          <button type="button" class="btn btn-primary btn-sm rounded-3 fw-semibold px-3" id="btnOpenAddCondition">
+            <i class="fa-solid fa-plus me-1"></i> Add Condition
+          </button>
+        </div>
+
+        <div id="conditionsContainer" class="row g-3">
+          <!-- Dynamic Condition Cards or Empty State -->
+        </div>
+      </div>
+
+      <!-- 4. Allergies Card -->
+      <div class="card-master mb-4">
+        <div class="card-header-master">
+          <h3 class="card-title-master">
+            <i class="fa-solid fa-hand-dots text-warning"></i> Allergies
+          </h3>
+          <button type="button" class="btn btn-primary btn-sm rounded-3 fw-semibold px-3" id="btnOpenAddAllergy">
+            <i class="fa-solid fa-plus me-1"></i> Add Allergy
+          </button>
+        </div>
+
+        <div id="allergiesContainer" class="row g-3">
+          <!-- Dynamic Allergy Cards or Empty State -->
+        </div>
+      </div>
+
+      <!-- 5. Current Medications Card -->
+      <div class="card-master mb-4">
+        <div class="card-header-master">
+          <h3 class="card-title-master">
+            <i class="fa-solid fa-pills text-info"></i> Current Medications
+          </h3>
+          <button type="button" class="btn btn-primary btn-sm rounded-3 fw-semibold px-3" id="btnOpenAddMedication">
+            <i class="fa-solid fa-plus me-1"></i> Add Medication
+          </button>
+        </div>
+
+        <div id="medicationsContainer" class="row g-3">
+          <!-- Dynamic Medication Cards or Empty State -->
+        </div>
+      </div>
+
+      <!-- 6. Surgery History Card -->
+      <div class="card-master mb-4">
+        <div class="card-header-master">
+          <h3 class="card-title-master">
+            <i class="fa-solid fa-syringe text-success"></i> Surgery History
+          </h3>
+          <button type="button" class="btn btn-primary btn-sm rounded-3 fw-semibold px-3" id="btnOpenAddSurgery">
+            <i class="fa-solid fa-plus me-1"></i> Add Surgery
+          </button>
+        </div>
+
+        <div id="surgeriesContainer" class="row g-3">
+          <!-- Dynamic Surgery Cards or Empty State -->
+        </div>
+      </div>
+
     </main>
   </div>
 
 </div>
+
+<!-- MODAL 1: ADD / EDIT INJURY MODAL -->
+<div class="modal fade" id="injuryModal" tabindex="-1" aria-labelledby="injuryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-dark text-white rounded-top-4 px-4 py-3">
+        <h5 class="modal-title font-heading fw-bold" id="injuryModalLabel">
+          <i class="fa-solid fa-bone text-danger me-2"></i> Add Injury Record
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="injuryForm" novalidate>
+        <input type="hidden" id="injuryId" value="">
+        <div class="modal-body p-4">
+          
+          <div class="mb-3">
+            <label for="injuryType" class="form-label">Injury Type <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="injuryType" placeholder="e.g. Hamstring Strain, Ankle Sprain" required>
+            <div class="invalid-feedback" id="injuryTypeError">Injury Type is required.</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="bodyPart" class="form-label">Body Part <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="bodyPart" placeholder="e.g. Left Thigh, Right Ankle" required>
+              <div class="invalid-feedback" id="bodyPartError">Body Part is required.</div>
+            </div>
+
+            <div class="col-md-6">
+              <label for="injuryDate" class="form-label">Date of Injury <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="injuryDate" required>
+              <div class="invalid-feedback" id="injuryDateError">Valid Injury Date is required.</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="injurySeverity" class="form-label">Severity</label>
+              <select class="form-select" id="injurySeverity" required>
+                <option value="Mild">Mild</option>
+                <option value="Moderate" selected>Moderate</option>
+                <option value="Severe">Severe</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label for="recoveryStatus" class="form-label">Recovery Status</label>
+              <select class="form-select" id="recoveryStatus" required>
+                <option value="Recovered" selected>Recovered</option>
+                <option value="Under Treatment">Under Treatment</option>
+                <option value="Ongoing">Ongoing</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="injuryTreatment" class="form-label">Treatment Received</label>
+            <input type="text" class="form-control" id="injuryTreatment" placeholder="e.g. Physiotherapy, Rest, Surgery">
+          </div>
+
+          <div class="mb-0">
+            <label for="injuryNotes" class="form-label">Additional Notes</label>
+            <textarea class="form-control" id="injuryNotes" rows="2" placeholder="e.g. Occurred during high-intensity sprint training"></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+          <button type="button" class="btn btn-outline-secondary fw-semibold px-4 rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm" id="btnSaveInjury">
+            <i class="fa-solid fa-check me-1"></i> Save Injury
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: ADD / EDIT MEDICAL CONDITION MODAL -->
+<div class="modal fade" id="conditionModal" tabindex="-1" aria-labelledby="conditionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-dark text-white rounded-top-4 px-4 py-3">
+        <h5 class="modal-title font-heading fw-bold" id="conditionModalLabel">
+          <i class="fa-solid fa-file-waveform text-primary me-2"></i> Add Medical Condition
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="conditionForm" novalidate>
+        <input type="hidden" id="conditionId" value="">
+        <div class="modal-body p-4">
+          
+          <div class="mb-3">
+            <label for="conditionName" class="form-label">Condition Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="conditionName" placeholder="e.g. Asthma, Hypertension" required>
+            <div class="invalid-feedback" id="conditionNameError">Condition Name is required.</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="diagnosisDate" class="form-label">Diagnosis Date</label>
+              <input type="date" class="form-control" id="diagnosisDate">
+            </div>
+
+            <div class="col-md-6">
+              <label for="conditionStatus" class="form-label">Status</label>
+              <select class="form-select" id="conditionStatus" required>
+                <option value="Active" selected>Active</option>
+                <option value="Managed">Managed</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-0">
+            <label for="conditionNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="conditionNotes" rows="2" placeholder="e.g. Exercise-induced asthma managed with inhaler"></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+          <button type="button" class="btn btn-outline-secondary fw-semibold px-4 rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm" id="btnSaveCondition">
+            <i class="fa-solid fa-check me-1"></i> Save Condition
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 3: ADD / EDIT ALLERGY MODAL -->
+<div class="modal fade" id="allergyModal" tabindex="-1" aria-labelledby="allergyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-dark text-white rounded-top-4 px-4 py-3">
+        <h5 class="modal-title font-heading fw-bold" id="allergyModalLabel">
+          <i class="fa-solid fa-hand-dots text-warning me-2"></i> Add Allergy Record
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="allergyForm" novalidate>
+        <input type="hidden" id="allergyId" value="">
+        <div class="modal-body p-4">
+          
+          <div class="mb-3">
+            <label for="allergyName" class="form-label">Allergy Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="allergyName" placeholder="e.g. Penicillin, Peanuts, Pollen" required>
+            <div class="invalid-feedback" id="allergyNameError">Allergy Name is required.</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="allergyType" class="form-label">Type</label>
+              <select class="form-select" id="allergyType" required>
+                <option value="Medication" selected>Medication Allergy</option>
+                <option value="Food">Food Allergy</option>
+                <option value="Environmental">Environmental</option>
+                <option value="Other">Other Allergy</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label for="allergyReaction" class="form-label">Reaction</label>
+              <input type="text" class="form-control" id="allergyReaction" placeholder="e.g. Skin Rash, Hives">
+            </div>
+          </div>
+
+          <div class="mb-0">
+            <label for="allergyNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="allergyNotes" rows="2" placeholder="e.g. Avoid beta-lactam antibiotics"></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+          <button type="button" class="btn btn-outline-secondary fw-semibold px-4 rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm" id="btnSaveAllergy">
+            <i class="fa-solid fa-check me-1"></i> Save Allergy
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 4: ADD / EDIT MEDICATION MODAL -->
+<div class="modal fade" id="medicationModal" tabindex="-1" aria-labelledby="medicationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-dark text-white rounded-top-4 px-4 py-3">
+        <h5 class="modal-title font-heading fw-bold" id="medicationModalLabel">
+          <i class="fa-solid fa-pills text-info me-2"></i> Add Medication
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="medicationForm" novalidate>
+        <input type="hidden" id="medicationId" value="">
+        <div class="modal-body p-4">
+          
+          <div class="mb-3">
+            <label for="medicationName" class="form-label">Medication Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="medicationName" placeholder="e.g. Albuterol Inhaler, Ibuprofen" required>
+            <div class="invalid-feedback" id="medicationNameError">Medication Name is required.</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="medDosage" class="form-label">Dosage</label>
+              <input type="text" class="form-control" id="medDosage" placeholder="e.g. 90 mcg, 200 mg">
+            </div>
+
+            <div class="col-md-6">
+              <label for="medFrequency" class="form-label">Frequency</label>
+              <input type="text" class="form-control" id="medFrequency" placeholder="e.g. 2 puffs before exercise">
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="medStartDate" class="form-label">Start Date</label>
+              <input type="date" class="form-control" id="medStartDate">
+            </div>
+
+            <div class="col-md-6">
+              <label for="medEndDate" class="form-label">End Date</label>
+              <input type="date" class="form-control" id="medEndDate">
+            </div>
+          </div>
+
+          <div class="mb-0">
+            <label for="medNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="medNotes" rows="2" placeholder="e.g. Take only when experiencing shortness of breath"></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+          <button type="button" class="btn btn-outline-secondary fw-semibold px-4 rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm" id="btnSaveMedication">
+            <i class="fa-solid fa-check me-1"></i> Save Medication
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 5: ADD / EDIT SURGERY MODAL -->
+<div class="modal fade" id="surgeryModal" tabindex="-1" aria-labelledby="surgeryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-dark text-white rounded-top-4 px-4 py-3">
+        <h5 class="modal-title font-heading fw-bold" id="surgeryModalLabel">
+          <i class="fa-solid fa-syringe text-success me-2"></i> Add Surgery Record
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="surgeryForm" novalidate>
+        <input type="hidden" id="surgeryId" value="">
+        <div class="modal-body p-4">
+          
+          <div class="mb-3">
+            <label for="surgeryName" class="form-label">Surgery Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="surgeryName" placeholder="e.g. Knee Arthroscopy, Appendectomy" required>
+            <div class="invalid-feedback" id="surgeryNameError">Surgery Name is required.</div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="surgeryBodyPart" class="form-label">Body Part <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="surgeryBodyPart" placeholder="e.g. Right Knee" required>
+              <div class="invalid-feedback" id="surgeryBodyPartError">Body Part is required.</div>
+            </div>
+
+            <div class="col-md-6">
+              <label for="surgeryDate" class="form-label">Surgery Date <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="surgeryDate" required>
+              <div class="invalid-feedback" id="surgeryDateError">Surgery Date is required.</div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="hospitalClinic" class="form-label">Hospital / Clinic</label>
+            <input type="text" class="form-control" id="hospitalClinic" placeholder="e.g. Sports Health Medical Center">
+          </div>
+
+          <div class="mb-0">
+            <label for="surgeryNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="surgeryNotes" rows="2" placeholder="e.g. Successful meniscus repair, full clearance given"></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+          <button type="button" class="btn btn-outline-secondary fw-semibold px-4 rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm" id="btnSaveSurgery">
+            <i class="fa-solid fa-check me-1"></i> Save Surgery
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 6: SAFE DELETE CONFIRMATION DIALOG -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg rounded-4 text-center">
+      <div class="modal-body p-4">
+        <div class="empty-state-icon bg-danger-subtle text-danger mb-3" style="width: 56px; height: 56px; margin: 0 auto;">
+          <i class="fa-solid fa-trash-can fs-4"></i>
+        </div>
+        <h5 class="font-heading fw-bold text-dark mb-2">Delete Record?</h5>
+        <p class="text-muted fs-7 mb-4">Are you sure you want to delete this medical record? This action cannot be undone.</p>
+        
+        <div class="d-flex gap-2 justify-content-center">
+          <button type="button" class="btn btn-light border fw-semibold px-3 rounded-3" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger fw-bold px-4 rounded-3 shadow-sm" id="btnConfirmDelete">
+            <i class="fa-solid fa-trash me-1"></i> Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/medical_history.js') }}"></script>
 {% endblock %}

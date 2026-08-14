@@ -5,11 +5,14 @@
 {% block content %}
 <div class="dashboard-wrapper">
   
+  <!-- Sidebar Navigation -->
   <aside class="app-sidebar" id="appSidebar">
     <div>
       <div class="sidebar-header">
         <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
-          <div class="brand-icon-sm"><i class="fa-solid fa-shield-halved"></i></div>
+          <div class="brand-icon-sm">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
           <div>
             <div class="brand-title">AthleteGuard AI</div>
             <span class="ai-badge">AI POWERED</span>
@@ -19,105 +22,428 @@
 
       <nav class="sidebar-nav">
         <a href="{{ url_for('dashboard') }}" class="nav-item-link">
-          <i class="fa-solid fa-chart-line"></i><span>Dashboard</span>
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Dashboard</span>
         </a>
         <a href="{{ url_for('profile') }}" class="nav-item-link">
-          <i class="fa-regular fa-user"></i><span>Profile</span>
+          <i class="fa-regular fa-user"></i>
+          <span>Profile</span>
         </a>
         <a href="{{ url_for('medical_history') }}" class="nav-item-link">
-          <i class="fa-solid fa-notes-medical"></i><span>Medical History</span>
+          <i class="fa-solid fa-notes-medical"></i>
+          <span>Medical History</span>
         </a>
         <a href="{{ url_for('daily_monitoring') }}" class="nav-item-link active">
-          <i class="fa-solid fa-calendar-check"></i><span>Daily Health Monitoring</span>
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>Daily Health Monitoring</span>
         </a>
         <a href="{{ url_for('prediction_history') }}" class="nav-item-link">
-          <i class="fa-solid fa-clock-rotate-left"></i><span>Prediction History</span>
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Prediction History</span>
         </a>
         <a href="{{ url_for('weekly_summary') }}" class="nav-item-link">
-          <i class="fa-solid fa-calendar-week"></i><span>Weekly Summary</span>
+          <i class="fa-solid fa-calendar-week"></i>
+          <span>Weekly Summary</span>
         </a>
         <a href="{{ url_for('monthly_summary') }}" class="nav-item-link">
-          <i class="fa-solid fa-calendar-days"></i><span>Monthly Summary</span>
+          <i class="fa-solid fa-calendar-days"></i>
+          <span>Monthly Summary</span>
         </a>
       </nav>
     </div>
 
     <div class="sidebar-footer">
       <div class="user-profile-widget">
-        <div class="avatar-circle">{{ user.full_name[0] | upper }}</div>
+        <div class="avatar-circle" id="sidebarAvatarCircle">
+          {% if user.profile_photo %}
+            <img src="{{ user.profile_photo }}" alt="{{ user.full_name }}">
+          {% else %}
+            <span>{{ user.initials }}</span>
+          {% endif %}
+        </div>
         <div class="user-info">
           <div class="user-name">{{ user.full_name }}</div>
           <span class="user-sport-badge">{{ user.primary_sport }}</span>
         </div>
-        <a href="{{ url_for('logout') }}" class="logout-btn-link"><i class="fa-solid fa-right-from-bracket"></i></a>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Sign Out">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
       </div>
     </div>
   </aside>
 
+  <!-- Main Content Area -->
   <div class="app-main">
+    
+    <!-- Top Header Bar -->
     <header class="app-header">
       <div class="header-left">
-        <button class="mobile-nav-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
-        <h1 class="header-title">Daily Health Monitoring Form</h1>
+        <button class="mobile-nav-toggle" id="sidebarToggle" aria-label="Toggle Navigation">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="header-title">Daily Health Monitoring</h1>
       </div>
+
       <div class="header-right">
-        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2"><i class="fa-solid fa-sign-out-alt me-1"></i> Logout</a>
+        <div class="status-pill-active">
+          <span class="pulse-dot"></span>
+          <span>Random Forest Model Active</span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 ms-2">
+          <div class="avatar-circle" style="width: 36px; height: 36px; font-size: 0.9rem;">
+            {% if user.profile_photo %}
+              <img src="{{ user.profile_photo }}" alt="{{ user.full_name }}">
+            {% else %}
+              <span>{{ user.initials }}</span>
+            {% endif %}
+          </div>
+          <span class="d-none d-md-inline text-dark fw-semibold fs-7">{{ user.full_name }}</span>
+        </div>
+
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
       </div>
     </header>
 
+    <!-- Main Content Container -->
     <main class="dashboard-content">
-      <div class="card-master mb-4" style="max-width: 800px;">
-        <div class="card-header-master">
-          <h3 class="card-title-master"><i class="fa-solid fa-file-medical"></i> Record Today's Health Assessment</h3>
-          <span class="badge bg-primary">Random Forest ML Input</span>
+      
+      <!-- Subtitle & Date Banner -->
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+          <h2 class="font-heading fw-bold fs-3 text-dark mb-1">Daily Health Entry</h2>
+          <p class="text-muted fs-7 mb-0">Record today's health and training data to assess your injury risk.</p>
         </div>
-        <p class="text-muted">Submit your daily health and training metrics to calculate your explainable injury risk prediction.</p>
-        
-        <form action="#" method="POST" class="mt-4">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-medium">Sleep Hours</label>
-              <input type="number" step="0.5" class="form-control" placeholder="e.g. 7.5" required>
+        <div class="badge bg-white text-dark border shadow-sm px-3 py-2 rounded-3 fs-7 fw-semibold">
+          <i class="fa-regular fa-calendar-days text-primary me-2"></i>
+          <span id="displayDateStr">{{ today_date_str }}</span>
+        </div>
+      </div>
+
+      <!-- Success & Error Alert Banners -->
+      <div id="monitoringSuccessAlert" class="alert alert-success alert-custom shadow-sm border-0 rounded-3" style="display: none;" role="alert">
+        <i class="fa-solid fa-circle-check fs-5"></i>
+        <div class="fw-medium" id="monitoringSuccessText">Health data recorded and injury risk calculated successfully.</div>
+      </div>
+
+      <div id="monitoringErrorAlert" class="alert alert-danger alert-custom shadow-sm border-0 rounded-3" style="display: none;" role="alert">
+        <i class="fa-solid fa-triangle-exclamation fs-5"></i>
+        <div class="fw-medium" id="monitoringErrorText">Unable to analyze your health data right now. Please try again.</div>
+      </div>
+
+      <!-- Duplicate Record Handling Alert Banner -->
+      <div id="todayRecordedBanner" class="alert alert-info alert-custom shadow-sm border-0 rounded-3" style="{% if not today_record %}display: none;{% endif %}" role="alert">
+        <i class="fa-solid fa-circle-info fs-5 text-info me-2"></i>
+        <div class="flex-grow-1 fw-medium">
+          Today's health monitoring has already been recorded.
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 fw-bold" id="btnToggleUpdateRecord">
+          <i class="fa-solid fa-pen-to-square me-1"></i> Update Today's Record
+        </button>
+      </div>
+
+      <!-- Athlete Summary Header Card -->
+      <div class="card-master mb-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="avatar-circle" style="width: 54px; height: 54px; font-size: 1.3rem;">
+              {% if user.profile_photo %}
+                <img src="{{ user.profile_photo }}" alt="{{ user.full_name }}">
+              {% else %}
+                <span>{{ user.initials }}</span>
+              {% endif %}
             </div>
-            <div class="col-md-6">
-              <label class="form-label fw-medium">Training Hours</label>
-              <input type="number" step="0.5" class="form-control" placeholder="e.g. 3.0" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-medium">Resting Heart Rate (bpm)</label>
-              <input type="number" class="form-control" placeholder="e.g. 68" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-medium">Fatigue Level</label>
-              <select class="form-select" required>
-                <option value="Low">Low</option>
-                <option value="Moderate">Moderate</option>
-                <option value="High">High</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-medium">Stress Level</label>
-              <select class="form-select" required>
-                <option value="Low">Low</option>
-                <option value="Moderate">Moderate</option>
-                <option value="High">High</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-medium">Previous Injury Present?</label>
-              <select class="form-select" required>
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-              </select>
+            <div>
+              <h4 class="font-heading fw-bold text-dark mb-0">{{ user.full_name }}</h4>
+              <div class="d-flex align-items-center gap-2 fs-7 text-muted">
+                <span class="badge bg-primary-subtle text-primary fw-semibold px-2 py-0.5">{{ user.primary_sport }} Athlete</span>
+                <span>•</span>
+                <span class="fw-bold text-dark">{{ user.athlete_id }}</span>
+              </div>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary mt-4 w-100 rounded-3 py-2 fw-semibold">
-            <i class="fa-solid fa-microchip me-1"></i> Calculate Injury Risk Prediction
-          </button>
-        </form>
+          <div class="d-flex align-items-center gap-3 text-muted fs-7">
+            <div>Age: <strong class="text-dark">{{ user.age }} yrs</strong></div>
+            <div>•</div>
+            <div>BMI: <strong class="text-dark">{{ user.bmi }}</strong></div>
+          </div>
+        </div>
       </div>
+
+      <div class="row g-4">
+        
+        <!-- Left Main Form Area -->
+        <div class="col-lg-8">
+          <form id="healthMonitoringForm" novalidate>
+            
+            <!-- SECTION 1: REST & RECOVERY -->
+            <div class="card-master mb-4">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-bed text-primary"></i> Rest & Recovery
+                </h3>
+                <span class="badge bg-light text-dark border">Section 1</span>
+              </div>
+
+              <div class="form-group mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <label for="sleepHoursInput" class="form-label mb-0">Sleep Duration (Hours)</label>
+                  <span class="slider-value-display" id="sleepDisplayVal">7.5 hrs</span>
+                </div>
+
+                <div class="row align-items-center g-3 mb-2">
+                  <div class="col">
+                    <input type="range" class="custom-range-slider" id="sleepHoursSlider" min="0" max="12" step="0.5" value="7.5">
+                  </div>
+                  <div class="col-auto" style="width: 90px;">
+                    <input type="number" class="form-control text-center fw-bold" id="sleepHoursInput" min="0" max="12" step="0.5" value="7.5" required>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between fs-8 text-muted">
+                  <span>0 hrs</span>
+                  <span><i class="fa-solid fa-circle-info text-info me-1"></i> Recommended: 7–9 hours</span>
+                  <span>12 hrs</span>
+                </div>
+                <div class="invalid-feedback" id="sleepHoursError">Sleep hours must be between 0 and 12.</div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: TRAINING LOAD -->
+            <div class="card-master mb-4">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-person-running text-success"></i> Training Load
+                </h3>
+                <span class="badge bg-light text-dark border">Section 2</span>
+              </div>
+
+              <div class="form-group mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <label for="trainingHoursInput" class="form-label mb-0">Training Duration (Hours)</label>
+                  <span class="slider-value-display" id="trainingDisplayVal">3.5 hrs</span>
+                </div>
+
+                <div class="row align-items-center g-3 mb-2">
+                  <div class="col">
+                    <input type="range" class="custom-range-slider" id="trainingHoursSlider" min="0" max="12" step="0.5" value="3.5">
+                  </div>
+                  <div class="col-auto" style="width: 90px;">
+                    <input type="number" class="form-control text-center fw-bold" id="trainingHoursInput" min="0" max="12" step="0.5" value="3.5" required>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-between fs-8 text-muted">
+                  <span>0 hrs</span>
+                  <span>Enter today's total training duration</span>
+                  <span>12 hrs</span>
+                </div>
+                <div class="invalid-feedback" id="trainingHoursError">Training hours must be between 0 and 12.</div>
+              </div>
+            </div>
+
+            <!-- SECTION 3: HEART RATE -->
+            <div class="card-master mb-4">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-heart-pulse text-danger"></i> Heart Rate Metrics
+                </h3>
+                <span class="badge bg-light text-dark border">Section 3</span>
+              </div>
+
+              <div class="form-group mb-0">
+                <label for="restingHeartRate" class="form-label">Resting Heart Rate (BPM)</label>
+                <div class="input-icon-wrapper">
+                  <i class="fa-solid fa-heartbeat input-icon text-danger"></i>
+                  <input type="number" class="form-control" id="restingHeartRate" min="30" max="180" value="62" placeholder="e.g. 62" required>
+                </div>
+                <div class="form-text fs-8 text-muted mt-1">Measured upon waking. Typical healthy range: 45–80 BPM.</div>
+                <div class="invalid-feedback" id="heartRateError">Enter a valid resting heart rate between 30 and 180 BPM.</div>
+              </div>
+            </div>
+
+            <!-- SECTION 4: FATIGUE LEVEL -->
+            <div class="card-master mb-4">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-battery-quarter text-warning"></i> Fatigue Level
+                </h3>
+                <span class="badge bg-light text-dark border">Section 4</span>
+              </div>
+
+              <div class="form-group mb-0">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="fs-7 text-muted fw-semibold">Subjective Muscle & Body Fatigue</span>
+                  <span class="slider-value-display" id="fatigueDisplayVal">6 / 10</span>
+                </div>
+
+                <input type="range" class="custom-range-slider mb-2" id="fatigueSlider" min="1" max="10" step="1" value="6">
+
+                <div class="d-flex justify-content-between fs-8 text-muted">
+                  <span>1 = Very Low Fatigue</span>
+                  <span>5 = Moderate</span>
+                  <span>10 = Very High Fatigue</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 5: STRESS LEVEL -->
+            <div class="card-master mb-4">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-brain text-purple" style="color: #7e22ce;"></i> Stress Level
+                </h3>
+                <span class="badge bg-light text-dark border">Section 5</span>
+              </div>
+
+              <div class="form-group mb-0">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="fs-7 text-muted fw-semibold">Physical & Mental Stress</span>
+                  <span class="slider-value-display" id="stressDisplayVal">4 / 10</span>
+                </div>
+
+                <input type="range" class="custom-range-slider mb-2" id="stressSlider" min="1" max="10" step="1" value="4">
+
+                <div class="d-flex justify-content-between fs-8 text-muted">
+                  <span>1 = Very Low Stress</span>
+                  <span>5 = Moderate</span>
+                  <span>10 = Very High Stress</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 6: PREVIOUS INJURY -->
+            <div class="card-master mb-4">
+              <div class="card-header-master">
+                <h3 class="card-title-master">
+                  <i class="fa-solid fa-user-ninja text-amber" style="color: #b45309;"></i> Previous Injury Status
+                </h3>
+                <span class="badge bg-light text-dark border">Section 6</span>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Do you have a history of previous injuries or current soreness?</label>
+                <div class="segmented-radio-group">
+                  <button type="button" class="btn-segment active" id="btnPrevInjNo" onclick="setPreviousInjury(false)">
+                    <i class="fa-solid fa-circle-check me-1"></i> No
+                  </button>
+                  <button type="button" class="btn-segment" id="btnPrevInjYes" onclick="setPreviousInjury(true)">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i> Yes
+                  </button>
+                </div>
+                <input type="hidden" id="previousInjuryVal" value="false">
+              </div>
+
+              <div id="injuryDetailsContainer" style="display: none;">
+                <label for="injuryDetailsText" class="form-label">Previous Injury / Soreness Details (Optional)</label>
+                <input type="text" class="form-control" id="injuryDetailsText" placeholder="e.g. Mild tightness in left hamstring">
+              </div>
+            </div>
+
+            <!-- PREDICTION ACTION BUTTON -->
+            <div class="mb-4">
+              <button type="submit" class="btn btn-primary btn-lg w-100 font-heading fw-bold py-3 rounded-3 shadow" id="btnPredictRisk">
+                <i class="fa-solid fa-shield-halved me-2"></i> Predict Injury Risk
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- Right Side Area: Today's Health Summary Card & ML Prediction Result Box -->
+        <div class="col-lg-4">
+          
+          <!-- Today's Live Health Summary Card -->
+          <div class="card-master mb-4 sticky-top" style="top: 90px;">
+            <div class="card-header-master">
+              <h4 class="card-title-master">
+                <i class="fa-solid fa-clipboard-check text-primary"></i> Today's Health Summary
+              </h4>
+            </div>
+
+            <div class="live-summary-box mb-4">
+              <div class="live-summary-item">
+                <span class="text-muted fs-7"><i class="fa-solid fa-bed text-primary me-2"></i>Sleep:</span>
+                <strong class="font-heading text-dark" id="summarySleep">7.5 hrs</strong>
+              </div>
+
+              <div class="live-summary-item">
+                <span class="text-muted fs-7"><i class="fa-solid fa-person-running text-success me-2"></i>Training:</span>
+                <strong class="font-heading text-dark" id="summaryTraining">3.5 hrs</strong>
+              </div>
+
+              <div class="live-summary-item">
+                <span class="text-muted fs-7"><i class="fa-solid fa-heart-pulse text-danger me-2"></i>Resting HR:</span>
+                <strong class="font-heading text-dark" id="summaryHeartRate">62 BPM</strong>
+              </div>
+
+              <div class="live-summary-item">
+                <span class="text-muted fs-7"><i class="fa-solid fa-battery-quarter text-warning me-2"></i>Fatigue:</span>
+                <strong class="font-heading text-dark" id="summaryFatigue">6/10</strong>
+              </div>
+
+              <div class="live-summary-item">
+                <span class="text-muted fs-7"><i class="fa-solid fa-brain text-purple me-2" style="color: #7e22ce;"></i>Stress:</span>
+                <strong class="font-heading text-dark" id="summaryStress">4/10</strong>
+              </div>
+
+              <div class="live-summary-item">
+                <span class="text-muted fs-7"><i class="fa-solid fa-user-ninja text-amber me-2" style="color: #b45309;"></i>Prev Injury:</span>
+                <strong class="font-heading text-dark" id="summaryPrevInj">No</strong>
+              </div>
+            </div>
+
+            <p class="fs-8 text-muted mb-0">
+              <i class="fa-solid fa-circle-info text-info me-1"></i>
+              Data will be submitted to the Random Forest ML Classifier to calculate real-time injury risk probability.
+            </p>
+          </div>
+
+          <!-- ML Prediction Result Card (Rendered after API submission) -->
+          <div class="prediction-result-card" id="predictionResultCard" style="display: none;">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <span class="badge bg-primary-subtle text-primary border font-heading fw-bold px-3 py-1">RANDOM FOREST ML RESULT</span>
+              <span class="fs-8 text-slate-400" id="resultTimestamp">Today</span>
+            </div>
+
+            <div class="text-center my-3">
+              <div class="risk-score-display mb-1" id="resultRiskScore">18.5%</div>
+              <div class="badge fs-6 px-3 py-1 rounded-pill fw-bold" id="resultRiskBadge">LOW RISK</div>
+            </div>
+
+            <hr class="border-secondary my-3 opacity-25">
+
+            <div class="mb-3">
+              <h6 class="font-heading fw-bold fs-7 text-uppercase text-slate-300 mb-2">
+                <i class="fa-solid fa-chart-pie me-1 text-info"></i> Key Risk Factors:
+              </h6>
+              <ul class="list-unstyled fs-8 text-slate-300 mb-0 ps-1" id="resultFactorsList">
+                <li><i class="fa-solid fa-check text-success me-2"></i>Optimal sleep & workload balance</li>
+              </ul>
+            </div>
+
+            <div>
+              <h6 class="font-heading fw-bold fs-7 text-uppercase text-slate-300 mb-2">
+                <i class="fa-solid fa-lightbulb me-1 text-warning"></i> Recommendation:
+              </h6>
+              <div class="fs-8 text-slate-300 bg-white-10 p-2.5 rounded-3 border border-white-10" id="resultRecommendationsText">
+                Maintain current training load and healthy recovery protocols.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
     </main>
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/daily_monitoring.js') }}"></script>
 {% endblock %}
