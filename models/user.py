@@ -21,6 +21,7 @@ class User(db.Model):
     emergency_relationship = db.Column(db.String(50), nullable=True, default='Parent / Guardian')
     emergency_phone = db.Column(db.String(20), nullable=True, default='+91 91234 56789')
     profile_photo = db.Column(db.String(255), nullable=True) # Relative path: /static/uploads/profile_photos/ath_0001.jpg
+    role = db.Column(db.String(20), nullable=False, default='athlete')
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -89,6 +90,7 @@ class User(db.Model):
             'emergency_relationship': self.emergency_relationship or 'Parent / Guardian',
             'emergency_phone': self.emergency_phone or '+91 91234 56789',
             'profile_photo': self.profile_photo,
+            'role': self.role or 'athlete',
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 

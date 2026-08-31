@@ -3,9 +3,10 @@ import time
 import base64
 from datetime import datetime
 from functools import wraps
+from urllib.parse import quote_plus
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.utils import secure_filename
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from models import db
 from models.user import User
 from models.medical import Injury, MedicalCondition, Allergy, Medication, Surgery
@@ -21,26 +22,49 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
 
-# MySQL Configuration with SQLite Fallback
+# MySQL Configuration (Primary Active Database)
 DB_USER = os.environ.get("DB_USER", "root")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "password")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "AthleteGuard@2026!")
 DB_HOST = os.environ.get("DB_HOST", "localhost")
+DB_PORT = os.environ.get("DB_PORT", "3306")
 DB_NAME = os.environ.get("DB_NAME", "athleteguard_db")
 
 USE_MYSQL = os.environ.get("USE_MYSQL", "true").lower() == "true"
-MYSQL_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 SQLITE_URI = "sqlite:///athleteguard_dev.db"
+
+encoded_password = quote_plus(DB_PASSWORD)
+MYSQL_URI = f"mysql+pymysql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 selected_uri = SQLITE_URI
 if USE_MYSQL:
     try:
-        engine = create_engine(MYSQL_URI, connect_args={"connect_timeout": 3})
+        # Test MySQL Connection and Verify Database & Required Tables
+        engine = create_engine(MYSQL_URI, connect_args={"connect_timeout": 5})
         with engine.connect() as conn:
-            pass
+            res = conn.execute(text("SELECT DATABASE()")).fetchone()
+            current_db = res[0] if res else None
+            
+            inspector = inspect(engine)
+            existing_tables = set(inspector.get_table_names())
+            required_tables = {'users', 'daily_health_records', 'injuries', 'medical_conditions', 'allergies', 'medications', 'surgeries'}
+            missing = required_tables - existing_tables
+            if missing:
+                raise RuntimeError(f"Connected to MySQL database '{current_db}', but missing required tables: {missing}")
+
         selected_uri = MYSQL_URI
-        print("Successfully connected to MySQL database.")
+        print(f"==================================================")
+        print(f"[SUCCESS] Connected to ACTIVE MySQL database: '{current_db}' on {DB_HOST}:{DB_PORT}")
+        print(f"[VERIFIED TABLES] All {len(required_tables)} required AthleteGuard AI tables exist in MySQL.")
+        print(f"==================================================")
     except Exception as e:
-        print(f"MySQL connection test failed ({e}). Falling back to SQLite database.")
+        print(f"==================================================")
+        print(f"[FATAL DATABASE ERROR] Failed to connect to MySQL database '{DB_NAME}' on {DB_HOST}:{DB_PORT}")
+        print(f"Details: {e}")
+        print(f"==================================================")
+        raise RuntimeError(f"MySQL Connection Error: Failed to connect to MySQL database '{DB_NAME}'. Details: {e}")
+else:
+    selected_uri = SQLITE_URI
+    print(f"[NOTE] Running with manual fallback SQLite database: {SQLITE_URI}")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = selected_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -50,6 +74,16 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    # Migration helper: ensure 'role' column exists in 'users' table without data loss
+    try:
+        inspector = inspect(db.engine)
+        columns = [c['name'] for c in inspector.get_columns('users')]
+        if 'role' not in columns:
+            db.session.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'athlete'"))
+            db.session.commit()
+            print("Successfully verified database schema: 'role' column present in 'users' table.")
+    except Exception as e:
+        print(f"Database schema verification note: {e}")
 
 
 def allowed_file(filename):
@@ -67,6 +101,24 @@ def login_required(f):
     return decorated_function
 
 
+def admin_required(f):
+    """Decorator to restrict access strictly to authenticated Admin users."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("Please sign in with Admin credentials to access the Admin Panel.", "warning")
+            return redirect(url_for('login'))
+
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        if not user or user.role != 'admin':
+            flash("Access denied. Admin privileges are required to view this page.", "danger")
+            return redirect(url_for('dashboard'))
+
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 @app.route('/')
 def index():
     """Public Landing Page route."""
@@ -75,8 +127,11 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Login handler with password verification and session management."""
+    """Login handler with password verification, role management, and session routing."""
     if 'user_id' in session:
+        user_role = session.get('user_role')
+        if user_role == 'admin':
+            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -96,8 +151,11 @@ def login():
             session['user_name'] = user.full_name
             session['user_email'] = user.email
             session['user_sport'] = user.primary_sport
+            session['user_role'] = user.role or 'athlete'
 
             flash(f"Welcome back, {user.full_name}!", "success")
+            if user.role == 'admin':
+                return redirect(url_for('admin_dashboard'))
             return redirect(url_for('dashboard'))
         else:
             flash("Invalid Athlete ID/Email or password. Please try again.", "danger")
@@ -110,6 +168,9 @@ def login():
 def register():
     """Registration handler with password hashing and database storage."""
     if 'user_id' in session:
+        user_role = session.get('user_role')
+        if user_role == 'admin':
+            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -135,12 +196,14 @@ def register():
             return render_template('register.html', error_msg="Email already registered. Try logging in instead.")
 
         try:
+            # SECURITY: Hardcode role='athlete' on the backend regardless of client inputs
             new_user = User(
                 full_name=full_name,
                 age=int(age),
                 gender=gender,
                 primary_sport=primary_sport,
-                email=email
+                email=email,
+                role='athlete'
             )
             new_user.set_password(password)
 
@@ -151,6 +214,7 @@ def register():
             session['user_name'] = new_user.full_name
             session['user_email'] = new_user.email
             session['user_sport'] = new_user.primary_sport
+            session['user_role'] = new_user.role
 
             flash("Athlete Account created successfully! Welcome to your Dashboard.", "success")
             return redirect(url_for('dashboard'))
@@ -161,6 +225,311 @@ def register():
             return render_template('register.html')
 
     return render_template('register.html')
+
+
+# ==========================================
+# ADMIN PAGE ROUTES & REST APIs
+# ==========================================
+
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    """Admin Dashboard Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('admin/dashboard.html', user=user)
+
+
+@app.route('/admin/athletes')
+@admin_required
+def admin_athletes():
+    """Admin Registered Athletes Management Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('admin/athletes.html', user=user)
+
+
+@app.route('/admin/athletes/<int:user_id>')
+@admin_required
+def admin_athlete_detail(user_id):
+    """Admin Read-Only Athlete Detail & Health Audit Page."""
+    user = User.query.get(session.get('user_id'))
+    athlete = User.query.filter_by(id=user_id, role='athlete').first_or_404()
+    return render_template('admin/athlete_detail.html', user=user, athlete=athlete)
+
+
+@app.route('/admin/health-records')
+@admin_required
+def admin_health_records():
+    """Admin Daily Health Monitoring Records Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('admin/health_records.html', user=user)
+
+
+@app.route('/admin/predictions')
+@admin_required
+def admin_predictions():
+    """Admin Global Prediction Records Page."""
+    user = User.query.get(session.get('user_id'))
+    return render_template('admin/predictions.html', user=user)
+
+
+# ==========================================
+# ADMIN REST APIs
+# ==========================================
+
+@app.route('/api/admin/stats', methods=['GET'])
+@admin_required
+def get_admin_stats():
+    """API Endpoint returning live database statistics & risk distribution for Admin Dashboard."""
+    try:
+        total_athletes = User.query.filter(User.role == 'athlete').count()
+        total_health_records = DailyHealthRecord.query.count()
+        total_predictions = DailyHealthRecord.query.filter(DailyHealthRecord.risk_score.isnot(None)).count()
+        
+        low_risk_count = DailyHealthRecord.query.filter(DailyHealthRecord.risk_label.ilike('%low%')).count()
+        medium_risk_count = DailyHealthRecord.query.filter(DailyHealthRecord.risk_label.ilike('%medium%')).count()
+        high_risk_count = DailyHealthRecord.query.filter(DailyHealthRecord.risk_label.ilike('%high%')).count()
+
+        # Recent Athletes (Latest 5 ordered by created_at)
+        recent_athletes_query = User.query.filter(User.role == 'athlete').order_by(User.created_at.desc(), User.id.desc()).limit(5).all()
+        recent_athletes = [a.to_dict() for a in recent_athletes_query]
+
+        # Recent Predictions (Latest 5 ordered by created_at)
+        recent_preds_query = DailyHealthRecord.query.filter(DailyHealthRecord.risk_score.isnot(None)).order_by(DailyHealthRecord.created_at.desc(), DailyHealthRecord.id.desc()).limit(5).all()
+        recent_predictions = []
+        for p in recent_preds_query:
+            ath = User.query.get(p.user_id)
+            rec_dict = p.to_dict()
+            rec_dict['athlete_name'] = ath.full_name if ath else 'Unknown Athlete'
+            rec_dict['athlete_sport'] = ath.primary_sport if ath else 'N/A'
+            recent_predictions.append(rec_dict)
+
+        return jsonify({
+            'status': 'success',
+            'stats': {
+                'total_athletes': total_athletes,
+                'total_health_records': total_health_records,
+                'total_predictions': total_predictions,
+                'low_risk_count': low_risk_count,
+                'medium_risk_count': medium_risk_count,
+                'high_risk_count': high_risk_count
+            },
+            'risk_distribution': {
+                'labels': ['Low Risk', 'Medium Risk', 'High Risk'],
+                'counts': [low_risk_count, medium_risk_count, high_risk_count],
+                'colors': ['#22c55e', '#f59e0b', '#ef4444']
+            },
+            'recent_athletes': recent_athletes,
+            'recent_predictions': recent_predictions
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': 'Unable to load dashboard data. Please try again.'}), 500
+
+
+@app.route('/api/admin/athletes', methods=['GET'])
+@admin_required
+def get_admin_athletes():
+    """API Endpoint returning list of registered athletes with search & sport filtering."""
+    try:
+        query_str = request.args.get('q', '').strip().lower()
+        sport_filter = request.args.get('sport', '').strip().lower()
+
+        athletes_query = User.query.filter(User.role == 'athlete').order_by(User.created_at.desc(), User.id.desc()).all()
+        result = []
+
+        for ath in athletes_query:
+            # Sport Filter
+            if sport_filter and sport_filter != 'all':
+                if ath.primary_sport.lower() != sport_filter:
+                    continue
+
+            # Search Filter (Name, Email, Athlete ID, Sport)
+            if query_str:
+                matches = (
+                    query_str in ath.full_name.lower() or
+                    query_str in ath.email.lower() or
+                    query_str in ath.athlete_id.lower() or
+                    query_str in ath.primary_sport.lower()
+                )
+                if not matches:
+                    continue
+
+            result.append(ath.to_dict())
+
+        return jsonify({
+            'status': 'success',
+            'count': len(result),
+            'athletes': result
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': 'Unable to load athletes roster. Please try again.'}), 500
+
+
+@app.route('/api/admin/athletes/<int:user_id>', methods=['GET'])
+@admin_required
+def get_admin_athlete_detail(user_id):
+    """API Endpoint returning deep read-only profile & health overview for a specific athlete."""
+    try:
+        athlete = User.query.filter_by(id=user_id, role='athlete').first()
+        if not athlete:
+            return jsonify({'status': 'error', 'message': 'Athlete record not found.'}), 404
+
+        # Query Medical History Records
+        injuries = Injury.query.filter_by(user_id=user_id).order_by(Injury.id.desc()).all()
+        conditions = MedicalCondition.query.filter_by(user_id=user_id).order_by(MedicalCondition.id.desc()).all()
+        allergies = Allergy.query.filter_by(user_id=user_id).order_by(Allergy.id.desc()).all()
+        medications = Medication.query.filter_by(user_id=user_id).order_by(Medication.id.desc()).all()
+        surgeries = Surgery.query.filter_by(user_id=user_id).order_by(Surgery.id.desc()).all()
+
+        # Query Daily Health & Prediction Records
+        health_records = DailyHealthRecord.query.filter_by(user_id=user_id).order_by(DailyHealthRecord.record_date.desc(), DailyHealthRecord.id.desc()).all()
+
+        # Calculate Summary Averages & Trends
+        pred_records = [r for r in health_records if r.risk_score is not None]
+        total_predictions = len(pred_records)
+        latest_risk = pred_records[0].to_dict() if pred_records else None
+
+        avg_sleep = round(sum(r.sleep_hours for r in health_records) / len(health_records), 1) if health_records else 0.0
+        avg_training = round(sum(r.training_hours for r in health_records) / len(health_records), 1) if health_records else 0.0
+        avg_hr = round(sum(r.resting_heart_rate for r in health_records) / len(health_records), 1) if health_records else 0.0
+        avg_fatigue = round(sum(r.fatigue_level for r in health_records) / len(health_records), 1) if health_records else 0.0
+        avg_stress = round(sum(r.stress_level for r in health_records) / len(health_records), 1) if health_records else 0.0
+
+        low_count = sum(1 for r in pred_records if 'low' in (r.risk_label or '').lower())
+        med_count = sum(1 for r in pred_records if 'medium' in (r.risk_label or '').lower())
+        high_count = sum(1 for r in pred_records if 'high' in (r.risk_label or '').lower())
+
+        # Recent 7 chronological records for trend chart
+        chronological_records = sorted(health_records[:7], key=lambda x: x.record_date)
+        trend_labels = [r.record_date for r in chronological_records]
+        trend_sleep = [r.sleep_hours for r in chronological_records]
+        trend_training = [r.training_hours for r in chronological_records]
+        trend_hr = [r.resting_heart_rate for r in chronological_records]
+        trend_risk = [r.risk_score if r.risk_score is not None else 0 for r in chronological_records]
+
+        return jsonify({
+            'status': 'success',
+            'athlete': athlete.to_dict(),
+            'summary_stats': {
+                'total_predictions': total_predictions,
+                'latest_risk': latest_risk,
+                'avg_sleep': avg_sleep,
+                'avg_training': avg_training,
+                'avg_hr': avg_hr,
+                'avg_fatigue': avg_fatigue,
+                'avg_stress': avg_stress,
+                'low_count': low_count,
+                'med_count': med_count,
+                'high_count': high_count
+            },
+            'medical_history': {
+                'injuries': [i.to_dict() for i in injuries],
+                'conditions': [c.to_dict() for c in conditions],
+                'allergies': [a.to_dict() for a in allergies],
+                'medications': [m.to_dict() for m in medications],
+                'surgeries': [s.to_dict() for s in surgeries]
+            },
+            'health_records': [r.to_dict() for r in health_records],
+            'predictions': [r.to_dict() for r in pred_records],
+            'trends': {
+                'labels': trend_labels,
+                'sleep': trend_sleep,
+                'training': trend_training,
+                'resting_hr': trend_hr,
+                'risk_score': trend_risk
+            }
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': 'Unable to load athlete details. Please try again.'}), 500
+
+
+@app.route('/api/admin/health-records', methods=['GET'])
+@admin_required
+def get_admin_health_records():
+    """API Endpoint returning global daily health monitoring log across all athletes."""
+    try:
+        query_str = request.args.get('q', '').strip().lower()
+        records = DailyHealthRecord.query.order_by(DailyHealthRecord.record_date.desc(), DailyHealthRecord.id.desc()).all()
+        
+        result = []
+        for r in records:
+            ath = User.query.get(r.user_id)
+            if not ath or ath.role == 'admin':
+                continue
+
+            rec_dict = r.to_dict()
+            rec_dict['athlete_name'] = ath.full_name
+            rec_dict['athlete_id'] = ath.athlete_id
+            rec_dict['primary_sport'] = ath.primary_sport
+
+            if query_str:
+                matches = (
+                    query_str in ath.full_name.lower() or
+                    query_str in ath.athlete_id.lower() or
+                    query_str in ath.primary_sport.lower() or
+                    query_str in r.record_date.lower() or
+                    query_str in (r.injury_details or '').lower()
+                )
+                if not matches:
+                    continue
+
+            result.append(rec_dict)
+
+        return jsonify({
+            'status': 'success',
+            'count': len(result),
+            'records': result
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': 'Unable to load health records. Please try again.'}), 500
+
+
+@app.route('/api/admin/predictions', methods=['GET'])
+@admin_required
+def get_admin_predictions():
+    """API Endpoint returning global prediction records across all athletes with risk filter."""
+    try:
+        risk_filter = request.args.get('risk_level', '').strip().lower()
+        query_str = request.args.get('q', '').strip().lower()
+
+        records = DailyHealthRecord.query.filter(DailyHealthRecord.risk_score.isnot(None)).order_by(DailyHealthRecord.record_date.desc(), DailyHealthRecord.id.desc()).all()
+        
+        result = []
+        for r in records:
+            ath = User.query.get(r.user_id)
+            if not ath or ath.role == 'admin':
+                continue
+
+            rec_dict = r.to_dict()
+            rec_dict['athlete_name'] = ath.full_name
+            rec_dict['athlete_id'] = ath.athlete_id
+            rec_dict['primary_sport'] = ath.primary_sport
+
+            # Risk Filter
+            if risk_filter and risk_filter != 'all':
+                if risk_filter not in (r.risk_label or '').lower():
+                    continue
+
+            # Search Filter
+            if query_str:
+                matches = (
+                    query_str in ath.full_name.lower() or
+                    query_str in ath.athlete_id.lower() or
+                    query_str in ath.primary_sport.lower() or
+                    query_str in (r.risk_label or '').lower() or
+                    query_str in r.record_date.lower()
+                )
+                if not matches:
+                    continue
+
+            result.append(rec_dict)
+
+        return jsonify({
+            'status': 'success',
+            'count': len(result),
+            'records': result
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': 'Unable to load prediction records. Please try again.'}), 500
 
 
 @app.route('/logout')
@@ -816,6 +1185,34 @@ def prediction_history():
     """Prediction History Page."""
     user = User.query.get(session.get('user_id'))
     return render_template('prediction_history.html', user=user)
+
+
+@app.route('/api/predictions/history', methods=['GET'])
+@login_required
+def get_prediction_history():
+    """API endpoint returning authenticated athlete's complete historical injury risk predictions."""
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'status': 'error', 'message': 'Unauthorized athlete session.'}), 401
+
+    try:
+        records = DailyHealthRecord.query.filter_by(user_id=user_id).order_by(
+            DailyHealthRecord.record_date.desc(),
+            DailyHealthRecord.id.desc()
+        ).all()
+
+        return jsonify({
+            'status': 'success',
+            'count': len(records),
+            'records': [r.to_dict() for r in records]
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': 'Unable to load prediction history. Please try again.'
+        }), 500
+
 
 
 @app.route('/weekly-summary')

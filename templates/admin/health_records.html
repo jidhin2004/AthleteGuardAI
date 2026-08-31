@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Global Health Records - Admin Panel - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <!-- Admin Sidebar Navigation -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('admin_dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm" style="background: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge" style="background-color: #0284c7;">ADMIN PANEL</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item-link">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('admin_athletes') }}" class="nav-item-link">
+          <i class="fa-solid fa-users"></i>
+          <span>Athletes</span>
+        </a>
+        <a href="{{ url_for('admin_health_records') }}" class="nav-item-link active">
+          <i class="fa-solid fa-notes-medical"></i>
+          <span>Health Records</span>
+        </a>
+        <a href="{{ url_for('admin_predictions') }}" class="nav-item-link">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Predictions</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle" style="background: linear-gradient(135deg, #0f172a, #334155);">
+          <span>AD</span>
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge text-info">System Administrator</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Sign Out">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="app-main">
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-nav-toggle" id="sidebarToggle" aria-label="Toggle Navigation">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="header-title">Daily Health Monitoring Logs</h1>
+      </div>
+
+      <div class="header-right">
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
+      </div>
+    </header>
+
+    <main class="dashboard-content">
+      
+      <div class="card-master mb-4">
+        
+        <div class="card-header-master flex-wrap gap-3">
+          <h3 class="card-title-master">
+            <i class="fa-solid fa-notes-medical text-primary"></i> Global Athlete Health Submissions
+          </h3>
+          <span class="badge bg-primary fs-7 px-3 py-1.5 rounded-pill" id="totalRecordsBadge">Loading...</span>
+        </div>
+
+        <!-- Search Toolbar -->
+        <div class="my-3">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0 text-muted">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0" id="healthSearchInput" placeholder="Search by Athlete Name, Athlete ID, Sport, Date, or Notes...">
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="healthLoadingState" class="text-center py-5">
+          <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <h5 class="text-muted fw-semibold mb-0">Loading daily health records...</h5>
+        </div>
+
+        <!-- Empty State -->
+        <div id="healthEmptyState" class="text-center py-5" style="display: none;">
+          <div class="text-slate-400 mb-3">
+            <i class="fa-solid fa-file-excel fa-4x text-primary opacity-50"></i>
+          </div>
+          <h4 class="fw-bold text-dark mb-2">No health monitoring records available.</h4>
+          <p class="text-muted fs-7 mb-0">No daily health submissions match your search query.</p>
+        </div>
+
+        <!-- Health Records Table -->
+        <div id="healthContentArea" style="display: none;">
+          <div class="table-responsive mt-3">
+            <table class="table custom-table align-middle text-nowrap">
+              <thead>
+                <tr>
+                  <th style="min-width: 160px;">Athlete</th>
+                  <th style="min-width: 120px;">Sport</th>
+                  <th style="min-width: 110px;">Date</th>
+                  <th style="min-width: 90px;">Sleep</th>
+                  <th style="min-width: 90px;">Training</th>
+                  <th style="min-width: 110px;">Heart Rate</th>
+                  <th style="min-width: 85px;">Fatigue</th>
+                  <th style="min-width: 85px;">Stress</th>
+                  <th style="min-width: 110px;">Prev Injury</th>
+                </tr>
+              </thead>
+              <tbody id="healthTableBody">
+                <!-- Populated via static/js/admin_health_records.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin_health_records.js') }}"></script>
+{% endblock %}

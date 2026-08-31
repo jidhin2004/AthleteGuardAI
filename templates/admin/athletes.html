@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Athletes Roster - Admin Panel - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <!-- Admin Sidebar Navigation -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('admin_dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm" style="background: linear-gradient(135deg, #1d4ed8 0%, #0284c7 100%);">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge" style="background-color: #0284c7;">ADMIN PANEL</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item-link">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('admin_athletes') }}" class="nav-item-link active">
+          <i class="fa-solid fa-users"></i>
+          <span>Athletes</span>
+        </a>
+        <a href="{{ url_for('admin_health_records') }}" class="nav-item-link">
+          <i class="fa-solid fa-notes-medical"></i>
+          <span>Health Records</span>
+        </a>
+        <a href="{{ url_for('admin_predictions') }}" class="nav-item-link">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Predictions</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle" style="background: linear-gradient(135deg, #0f172a, #334155);">
+          <span>AD</span>
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge text-info">System Administrator</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Sign Out">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="app-main">
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-nav-toggle" id="sidebarToggle" aria-label="Toggle Navigation">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="header-title">Registered Athletes Roster</h1>
+      </div>
+
+      <div class="header-right">
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
+      </div>
+    </header>
+
+    <main class="dashboard-content">
+      
+      <div class="card-master mb-4">
+        
+        <div class="card-header-master flex-wrap gap-3">
+          <h3 class="card-title-master">
+            <i class="fa-solid fa-users text-primary"></i> Athlete Management
+          </h3>
+          <span class="badge bg-primary fs-7 px-3 py-1.5 rounded-pill" id="totalAthletesBadge">Loading...</span>
+        </div>
+
+        <!-- Toolbar: Search Bar & Sport Filter -->
+        <div class="row g-3 my-3">
+          <div class="col-md-7 col-lg-8">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0 text-muted">
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </span>
+              <input type="text" class="form-control border-start-0 ps-0" id="athleteSearchInput" placeholder="Search by Athlete Name, Email, ID, or Primary Sport...">
+            </div>
+          </div>
+
+          <div class="col-md-5 col-lg-4">
+            <div class="d-flex align-items-center gap-2">
+              <label for="athleteSportFilter" class="form-label mb-0 text-nowrap fw-semibold fs-7 text-muted">Filter Sport:</label>
+              <select class="form-select" id="athleteSportFilter">
+                <option value="all">All Sports</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="athletesLoadingState" class="text-center py-5">
+          <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <h5 class="text-muted fw-semibold mb-0">Loading athlete roster...</h5>
+        </div>
+
+        <!-- Empty State -->
+        <div id="athletesEmptyState" class="text-center py-5" style="display: none;">
+          <div class="text-slate-400 mb-3">
+            <i class="fa-solid fa-user-slash fa-4x text-primary opacity-50"></i>
+          </div>
+          <h4 class="fw-bold text-dark mb-2">No registered athletes found.</h4>
+          <p class="text-muted fs-7 mb-0">No athlete accounts match the current query or exist in the database.</p>
+        </div>
+
+        <!-- Athletes Table -->
+        <div id="athletesContentArea" style="display: none;">
+          <div class="table-responsive mt-3">
+            <table class="table custom-table align-middle text-nowrap">
+              <thead>
+                <tr>
+                  <th style="min-width: 120px;">Athlete ID</th>
+                  <th style="min-width: 180px;">Name</th>
+                  <th style="min-width: 200px;">Email</th>
+                  <th style="min-width: 140px;">Primary Sport</th>
+                  <th style="min-width: 80px;">Age</th>
+                  <th style="min-width: 130px;">Registered</th>
+                  <th style="min-width: 120px;" class="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="athletesTableBody">
+                <!-- Populated via static/js/admin_athletes.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin_athletes.js') }}"></script>
+{% endblock %}

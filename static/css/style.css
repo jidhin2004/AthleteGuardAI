@@ -1330,3 +1330,122 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     padding: 1.25rem;
   }
 }
+
+/* ==========================================
+   3. CUSTOM TABLE STYLING FOR PREDICTION HISTORY
+   ========================================== */
+.custom-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 0;
+}
+
+.custom-table th {
+  background-color: var(--bg-input);
+  color: var(--text-medium);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 0.95rem 1.25rem;
+  border-bottom: 2px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.custom-table th:first-child {
+  border-top-left-radius: var(--radius-md);
+  border-left: 1px solid var(--border-color);
+}
+
+.custom-table th:last-child {
+  border-top-right-radius: var(--radius-md);
+  border-right: 1px solid var(--border-color);
+}
+
+.custom-table td {
+  padding: 1.05rem 1.25rem;
+  vertical-align: middle;
+  font-size: 0.9rem;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.custom-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.custom-table tbody tr:hover {
+  background-color: rgba(59, 130, 246, 0.04);
+}
+
+.custom-table tbody tr td:first-child {
+  border-left: 1px solid var(--border-color);
+}
+
+.custom-table tbody tr td:last-child {
+  border-right: 1px solid var(--border-color);
+}
+
+.custom-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: var(--radius-md);
+}
+
+.custom-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: var(--radius-md);
+}
+
+/* ==========================================
+   4. ADMIN MODULE SPECIFIC STYLES
+   ========================================== */
+.athlete-hero-banner {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0284c7 100%);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem;
+  color: #ffffff;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+}
+
+.nav-tabs-custom {
+  border-bottom: 2px solid var(--border-color);
+  gap: 0.5rem;
+}
+
+.nav-tabs-custom .nav-link {
+  border: none;
+  color: var(--text-medium);
+  font-size: 0.9rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  transition: all 0.2s ease;
+}
+
+.nav-tabs-custom .nav-link.active {
+  color: var(--primary);
+  background-color: #ffffff;
+  border-bottom: 3px solid var(--primary);
+}
+
+.btn-xs {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+.text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+
