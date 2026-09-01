@@ -1234,10 +1234,83 @@ def monthly_summary():
 @app.route('/api/dashboard-data')
 @login_required
 def get_dashboard_data():
-    """API endpoint providing decoupled dashboard statistics, trends, and risk distributions."""
+    """API endpoint providing dynamic athlete dashboard statistics, trends, and risk distributions from MySQL."""
     user = User.query.get(session.get('user_id'))
     if not user:
         return jsonify({'error': 'Unauthorized'}), 401
+
+    records = DailyHealthRecord.query.filter_by(user_id=user.id).order_by(
+        DailyHealthRecord.record_date.asc(),
+        DailyHealthRecord.id.asc()
+    ).all()
+
+    if not records:
+        return jsonify({
+            'status': 'success',
+            'has_predictions': False,
+            'model_status': 'Random Forest Model Active',
+            'user': {
+                'id': user.id,
+                'full_name': user.full_name,
+                'primary_sport': user.primary_sport,
+                'profile_photo': user.profile_photo
+            }
+        })
+
+    latest_rec = records[-1]
+    total_preds = len(records)
+    avg_sleep = round(sum(r.sleep_hours for r in records) / total_preds, 1)
+    avg_train = round(sum(r.training_hours for r in records) / total_preds, 1)
+
+    latest_score = round(latest_rec.risk_score, 1) if latest_rec.risk_score is not None else 0.0
+    latest_label = latest_rec.risk_label or 'Low Risk'
+
+    badge_color = 'success'
+    if latest_score > 65:
+        badge_color = 'danger'
+    elif latest_score > 30:
+        badge_color = 'warning'
+
+    # Risk Distribution Counts
+    low_cnt = sum(1 for r in records if (r.risk_label or '').lower() == 'low risk')
+    med_cnt = sum(1 for r in records if (r.risk_label or '').lower() == 'medium risk')
+    high_cnt = sum(1 for r in records if (r.risk_label or '').lower() == 'high risk')
+
+    # Health Trends (Last 7 Records)
+    recent_7 = records[-7:]
+    labels_7 = [r.record_date for r in recent_7]
+    sleep_7 = [r.sleep_hours for r in recent_7]
+    train_7 = [r.training_hours for r in recent_7]
+    hr_7 = [r.resting_heart_rate for r in recent_7]
+
+    # Health Trends (30 Days / All Records)
+    recent_30 = records[-30:]
+    labels_30 = [r.record_date for r in recent_30]
+    sleep_30 = [r.sleep_hours for r in recent_30]
+    train_30 = [r.training_hours for r in recent_30]
+    hr_30 = [r.resting_heart_rate for r in recent_30]
+
+    # Recent Predictions List
+    rec_pred_list = []
+    for r in list(reversed(records))[:5]:
+        r_score = round(r.risk_score, 1) if r.risk_score is not None else 0.0
+        r_label = r.risk_label or 'Low Risk'
+        r_badge = 'success'
+        if r_score > 65:
+            r_badge = 'danger'
+        elif r_score > 30:
+            r_badge = 'warning'
+        rec_pred_list.append({
+            'date': r.record_date,
+            'risk_level': r_label,
+            'risk_percent': r_score,
+            'status': 'Completed',
+            'badge_class': r_badge
+        })
+
+    # Today's Record / Latest Record Overview
+    today_str = datetime.utcnow().strftime('%Y-%m-%d')
+    today_rec = next((r for r in records if r.record_date == today_str), latest_rec)
 
     payload = {
         'status': 'success',
@@ -1250,50 +1323,46 @@ def get_dashboard_data():
             'profile_photo': user.profile_photo
         },
         'stats': {
-            'injury_risk_percent': 18,
-            'risk_level': 'LOW RISK',
-            'risk_badge_color': 'success',
-            'total_predictions': 12,
-            'avg_sleep_hrs': 7.4,
-            'avg_training_hrs': 3.2,
-            'last_prediction_date': '14 August 2026'
+            'injury_risk_percent': latest_score,
+            'risk_level': latest_label,
+            'risk_badge_color': badge_color,
+            'total_predictions': total_preds,
+            'avg_sleep_hrs': avg_sleep,
+            'avg_training_hrs': avg_train,
+            'last_prediction_date': latest_rec.record_date
         },
         'risk_summary': {
-            'risk_level': 'Low Risk',
-            'risk_percent': 18,
-            'predicted_on': '14 Aug 2026'
+            'risk_level': latest_label,
+            'risk_percent': latest_score,
+            'predicted_on': latest_rec.record_date
         },
         'health_trends': {
             '7_days': {
-                'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                'sleep': [7.5, 7.0, 7.8, 6.9, 7.4, 8.1, 7.2],
-                'training': [3.0, 3.5, 2.5, 4.0, 3.2, 2.0, 3.5],
-                'resting_hr': [66, 68, 65, 71, 67, 64, 68]
+                'labels': labels_7,
+                'sleep': sleep_7,
+                'training': train_7,
+                'resting_hr': hr_7
             },
             '30_days': {
-                'labels': ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-                'sleep': [7.2, 7.5, 7.3, 7.6],
-                'training': [3.1, 3.4, 3.0, 3.3],
-                'resting_hr': [67, 66, 68, 65]
+                'labels': labels_30,
+                'sleep': sleep_30,
+                'training': train_30,
+                'resting_hr': hr_30
             }
         },
         'risk_distribution': {
             'labels': ['Low Risk', 'Medium Risk', 'High Risk'],
-            'counts': [7, 3, 2],
+            'counts': [low_cnt, med_cnt, high_cnt],
             'colors': ['#22c55e', '#f59e0b', '#ef4444']
         },
-        'recent_predictions': [
-            {'date': '14 Aug 2026', 'risk_level': 'Low', 'risk_percent': 18, 'status': 'Completed', 'badge_class': 'success'},
-            {'date': '11 Aug 2026', 'risk_level': 'Medium', 'risk_percent': 54, 'status': 'Completed', 'badge_class': 'warning'},
-            {'date': '08 Aug 2026', 'risk_level': 'Low', 'risk_percent': 21, 'status': 'Completed', 'badge_class': 'success'}
-        ],
+        'recent_predictions': rec_pred_list,
         'todays_health_overview': {
-            'sleep_hrs': '7.4 hrs',
-            'training_hrs': '3.2 hrs',
-            'heart_rate': '72 bpm',
-            'fatigue': 'Low',
-            'stress': 'Moderate',
-            'previous_injury': 'No',
+            'sleep_hrs': f"{today_rec.sleep_hours} hrs",
+            'training_hrs': f"{today_rec.training_hours} hrs",
+            'heart_rate': f"{today_rec.resting_heart_rate} bpm",
+            'fatigue': f"Level {today_rec.fatigue_level}/10",
+            'stress': f"Level {today_rec.stress_level}/10",
+            'previous_injury': 'Yes' if today_rec.previous_injury else 'No',
             'has_today_data': True
         }
     }
