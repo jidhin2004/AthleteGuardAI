@@ -11,6 +11,8 @@ from models import db
 from models.user import User
 from models.medical import Injury, MedicalCondition, Allergy, Medication, Surgery
 from models.health import DailyHealthRecord
+from models.admin_note import AdminNote
+from models.notification import Notification
 from services.ml_service import ml_service
 
 app = Flask(__name__)
@@ -74,14 +76,32 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
-    # Migration helper: ensure 'role' column exists in 'users' table without data loss
+    # Migration helper: ensure required columns exist in MySQL tables without data loss
     try:
         inspector = inspect(db.engine)
-        columns = [c['name'] for c in inspector.get_columns('users')]
-        if 'role' not in columns:
+        
+        # Check users table
+        user_columns = [c['name'] for c in inspector.get_columns('users')]
+        if 'role' not in user_columns:
             db.session.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'athlete'"))
             db.session.commit()
-            print("Successfully verified database schema: 'role' column present in 'users' table.")
+        if 'account_status' not in user_columns:
+            db.session.execute(text("ALTER TABLE users ADD COLUMN account_status VARCHAR(20) NOT NULL DEFAULT 'active'"))
+            db.session.commit()
+
+        # Check daily_health_records table
+        health_columns = [c['name'] for c in inspector.get_columns('daily_health_records')]
+        if 'review_status' not in health_columns:
+            db.session.execute(text("ALTER TABLE daily_health_records ADD COLUMN review_status VARCHAR(30) NOT NULL DEFAULT 'Pending Review'"))
+            db.session.commit()
+        if 'reviewed_by' not in health_columns:
+            db.session.execute(text("ALTER TABLE daily_health_records ADD COLUMN reviewed_by INT NULL"))
+            db.session.commit()
+        if 'reviewed_at' not in health_columns:
+            db.session.execute(text("ALTER TABLE daily_health_records ADD COLUMN reviewed_at DATETIME NULL"))
+            db.session.commit()
+
+        print("[SCHEMA VERIFIED] Successfully verified MySQL database schema columns and tables.")
     except Exception as e:
         print(f"Database schema verification note: {e}")
 
@@ -143,9 +163,16 @@ def login():
             flash("Please enter both Athlete ID/Email and password.", "danger")
             return render_template('login.html')
 
+        db.session.expire_all()
         user = User.query.filter_by(email=email).first()
+        if user:
+            db.session.refresh(user)
 
         if user and user.check_password(password):
+            if (user.account_status or 'active').lower() == 'inactive':
+                flash("Your athlete account has been deactivated by the administrator. Please contact support.", "danger")
+                return render_template('login.html', error_msg="Your athlete account has been deactivated by the administrator. Please contact support.")
+
             session.permanent = True if remember else False
             session['user_id'] = user.id
             session['user_name'] = user.full_name
@@ -282,12 +309,41 @@ def get_admin_stats():
     """API Endpoint returning live database statistics & risk distribution for Admin Dashboard."""
     try:
         total_athletes = User.query.filter(User.role == 'athlete').count()
+        active_athletes = User.query.filter(User.role == 'athlete', db.or_(User.account_status == 'active', User.account_status.is_(None))).count()
+        inactive_athletes = User.query.filter(User.role == 'athlete', User.account_status == 'inactive').count()
+
         total_health_records = DailyHealthRecord.query.count()
         total_predictions = DailyHealthRecord.query.filter(DailyHealthRecord.risk_score.isnot(None)).count()
         
         low_risk_count = DailyHealthRecord.query.filter(DailyHealthRecord.risk_label.ilike('%low%')).count()
         medium_risk_count = DailyHealthRecord.query.filter(DailyHealthRecord.risk_label.ilike('%medium%')).count()
         high_risk_count = DailyHealthRecord.query.filter(DailyHealthRecord.risk_label.ilike('%high%')).count()
+        pending_reviews_count = DailyHealthRecord.query.filter(DailyHealthRecord.review_status == 'Pending Review').count()
+
+        # Priority Cases Query: High and Medium risk cases needing review (review_status != 'Resolved' and review_status != 'No Action Required')
+        priority_query = DailyHealthRecord.query.filter(
+            DailyHealthRecord.risk_score.isnot(None),
+            DailyHealthRecord.review_status.notin_(['Resolved', 'No Action Required'])
+        ).all()
+
+        # Sort priority cases: 1. HIGH before MEDIUM, 2. Higher score first, 3. Recency
+        def priority_sort_key(r):
+            is_high = 1 if 'high' in (r.risk_label or '').lower() else 0
+            score = r.risk_score or 0.0
+            return (is_high, score, r.record_date or '')
+
+        sorted_priority = sorted(priority_query, key=priority_sort_key, reverse=True)
+
+        priority_cases = []
+        for p in sorted_priority[:10]:
+            ath = User.query.get(p.user_id)
+            if not ath:
+                continue
+            p_dict = p.to_dict()
+            p_dict['athlete_name'] = ath.full_name
+            p_dict['athlete_id'] = ath.athlete_id
+            p_dict['primary_sport'] = ath.primary_sport
+            priority_cases.append(p_dict)
 
         # Recent Athletes (Latest 5 ordered by created_at)
         recent_athletes_query = User.query.filter(User.role == 'athlete').order_by(User.created_at.desc(), User.id.desc()).limit(5).all()
@@ -307,12 +363,16 @@ def get_admin_stats():
             'status': 'success',
             'stats': {
                 'total_athletes': total_athletes,
+                'active_athletes': active_athletes,
+                'inactive_athletes': inactive_athletes,
                 'total_health_records': total_health_records,
                 'total_predictions': total_predictions,
                 'low_risk_count': low_risk_count,
                 'medium_risk_count': medium_risk_count,
-                'high_risk_count': high_risk_count
+                'high_risk_count': high_risk_count,
+                'pending_reviews_count': pending_reviews_count
             },
+            'priority_cases': priority_cases,
             'risk_distribution': {
                 'labels': ['Low Risk', 'Medium Risk', 'High Risk'],
                 'counts': [low_risk_count, medium_risk_count, high_risk_count],
@@ -532,6 +592,360 @@ def get_admin_predictions():
         return jsonify({'status': 'error', 'message': 'Unable to load prediction records. Please try again.'}), 500
 
 
+# ==========================================
+# ADMIN CASE REVIEWS & NOTES REST APIs
+# ==========================================
+
+@app.route('/api/admin/cases/<int:record_id>', methods=['GET'])
+@admin_required
+def get_admin_case_detail(record_id):
+    """API Endpoint returning comprehensive case detail including health inputs, medical context, and notes."""
+    record = DailyHealthRecord.query.get(record_id)
+    if not record:
+        return jsonify({'status': 'error', 'message': 'Prediction record not found.'}), 404
+
+    athlete = User.query.get(record.user_id)
+    if not athlete:
+        return jsonify({'status': 'error', 'message': 'Athlete user not found.'}), 404
+
+    notes = AdminNote.query.filter_by(prediction_id=record.id).order_by(AdminNote.created_at.desc()).all()
+    injuries = Injury.query.filter_by(user_id=athlete.id).order_by(Injury.id.desc()).all()
+    surgeries = Surgery.query.filter_by(user_id=athlete.id).order_by(Surgery.id.desc()).all()
+
+    rec_dict = record.to_dict()
+    rec_dict['athlete_name'] = athlete.full_name
+    rec_dict['athlete_id'] = athlete.athlete_id
+    rec_dict['primary_sport'] = athlete.primary_sport
+
+    return jsonify({
+        'status': 'success',
+        'record': rec_dict,
+        'athlete': athlete.to_dict(),
+        'notes': [n.to_dict() for n in notes],
+        'medical_summary': {
+            'injuries': [i.to_dict() for i in injuries],
+            'surgeries': [s.to_dict() for s in surgeries]
+        }
+    })
+
+
+@app.route('/api/admin/cases/<int:record_id>/status', methods=['PUT'])
+@admin_required
+def update_case_status(record_id):
+    """API Endpoint for Admin to update prediction case review status."""
+    record = DailyHealthRecord.query.get(record_id)
+    if not record:
+        return jsonify({'status': 'error', 'message': 'Prediction record not found.'}), 404
+
+    data = request.get_json() or request.form.to_dict()
+    new_status = data.get('review_status', '').strip()
+    allowed_statuses = ['Pending Review', 'Under Review', 'Needs Attention', 'Monitoring', 'Resolved', 'No Action Required']
+    
+    if new_status not in allowed_statuses:
+        return jsonify({'status': 'error', 'message': f"Invalid review status. Allowed: {allowed_statuses}"}), 400
+
+    admin_id = session.get('user_id')
+    try:
+        record.review_status = new_status
+        record.reviewed_by = admin_id
+        record.reviewed_at = datetime.utcnow()
+        db.session.commit()
+
+        # Check if an optional note was submitted with the status update
+        note_text = data.get('note', '').strip()
+        if note_text:
+            note_obj = AdminNote(
+                admin_id=admin_id,
+                athlete_id=record.user_id,
+                prediction_id=record.id,
+                note=note_text
+            )
+            db.session.add(note_obj)
+
+            admin_user = User.query.get(admin_id)
+            admin_name = admin_user.full_name if admin_user else 'Administrator'
+            notif_msg = f"Your health assessment from {record.record_date} ({record.risk_label}) status was updated to '{new_status}' by {admin_name}. Note: {note_text}"
+            
+            notif = Notification(
+                athlete_id=record.user_id,
+                admin_id=admin_id,
+                message=notif_msg,
+                related_prediction_id=record.id
+            )
+            db.session.add(notif)
+            db.session.commit()
+
+        rec_dict = record.to_dict()
+        ath = User.query.get(record.user_id)
+        if ath:
+            rec_dict['athlete_name'] = ath.full_name
+            rec_dict['athlete_id'] = ath.athlete_id
+
+        return jsonify({
+            'status': 'success',
+            'message': f"Case status updated to '{new_status}' successfully.",
+            'record': rec_dict
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to update case status. Please try again.'}), 500
+
+
+@app.route('/api/admin/cases/<int:record_id>/notes', methods=['POST'])
+@admin_required
+def add_case_note(record_id):
+    """API Endpoint for Admin to add an administrative note to a case and notify athlete."""
+    record = DailyHealthRecord.query.get(record_id)
+    if not record:
+        return jsonify({'status': 'error', 'message': 'Prediction record not found.'}), 404
+
+    data = request.get_json() or request.form.to_dict()
+    note_text = data.get('note', '').strip()
+    if not note_text:
+        return jsonify({'status': 'error', 'message': 'Note text cannot be empty.'}), 400
+
+    admin_id = session.get('user_id')
+    admin_user = User.query.get(admin_id)
+
+    try:
+        note_obj = AdminNote(
+            admin_id=admin_id,
+            athlete_id=record.user_id,
+            prediction_id=record.id,
+            note=note_text
+        )
+        db.session.add(note_obj)
+
+        # Post notification to corresponding athlete
+        notif_msg = f"Your recent health assessment ({record.record_date}) has been reviewed by the administrator: {note_text}"
+        notif = Notification(
+            athlete_id=record.user_id,
+            admin_id=admin_id,
+            message=notif_msg,
+            related_prediction_id=record.id
+        )
+        db.session.add(notif)
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Admin note added and athlete notified successfully.',
+            'note': note_obj.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to save note. Please try again.'}), 500
+
+
+@app.route('/api/admin/notes/<int:note_id>', methods=['PUT', 'DELETE'])
+@admin_required
+def manage_admin_note(note_id):
+    """API Endpoint for editing or deleting an admin note."""
+    note_obj = AdminNote.query.get(note_id)
+    if not note_obj:
+        return jsonify({'status': 'error', 'message': 'Note not found.'}), 404
+
+    if request.method == 'DELETE':
+        try:
+            db.session.delete(note_obj)
+            db.session.commit()
+            return jsonify({'status': 'success', 'message': 'Admin note deleted successfully.'})
+        except Exception:
+            db.session.rollback()
+            return jsonify({'status': 'error', 'message': 'Unable to delete note.'}), 500
+
+    data = request.get_json() or request.form.to_dict()
+    new_text = data.get('note', '').strip()
+    if not new_text:
+        return jsonify({'status': 'error', 'message': 'Note content cannot be empty.'}), 400
+
+    try:
+        note_obj.note = new_text
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Admin note updated successfully.', 'note': note_obj.to_dict()})
+    except Exception:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to update note.'}), 500
+
+
+@app.route('/api/admin/notifications', methods=['POST'])
+@admin_required
+def create_admin_notification():
+    """
+    API Endpoint for Admin to send a direct notification/recommendation to a specific athlete.
+    Payload: { "athlete_id": int, "related_prediction_id": int|null, "message": str }
+    """
+    data = request.get_json() or request.form.to_dict()
+
+    athlete_id = data.get('athlete_id')
+    try:
+        athlete_id = int(athlete_id)
+    except (ValueError, TypeError):
+        return jsonify({'status': 'error', 'message': 'Invalid or missing athlete ID.'}), 400
+
+    athlete = User.query.get(athlete_id)
+    if not athlete or athlete.role == 'admin':
+        return jsonify({'status': 'error', 'message': 'Athlete not found.'}), 404
+
+    message = data.get('message', '').strip()
+    if not message:
+        return jsonify({'status': 'error', 'message': 'Notification message cannot be empty.'}), 400
+
+    related_prediction_id = data.get('related_prediction_id')
+    if related_prediction_id:
+        try:
+            related_prediction_id = int(related_prediction_id)
+            record = DailyHealthRecord.query.get(related_prediction_id)
+            if not record:
+                return jsonify({'status': 'error', 'message': 'Related prediction record not found.'}), 404
+            if record.user_id != athlete_id:
+                return jsonify({'status': 'error', 'message': 'Selected prediction record does not belong to this athlete.'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'status': 'error', 'message': 'Invalid related prediction ID.'}), 400
+    else:
+        related_prediction_id = None
+
+    admin_id = session.get('user_id')
+
+    try:
+        notif = Notification(
+            athlete_id=athlete_id,
+            admin_id=admin_id,
+            message=message,
+            related_prediction_id=related_prediction_id
+        )
+        db.session.add(notif)
+
+        # If linked to a prediction record, also store an AdminNote
+        if related_prediction_id:
+            note_obj = AdminNote(
+                admin_id=admin_id,
+                athlete_id=athlete_id,
+                prediction_id=related_prediction_id,
+                note=message
+            )
+            db.session.add(note_obj)
+
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Notification sent successfully.',
+            'notification': notif.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to send notification. Please try again.'}), 500
+
+
+# ==========================================
+# ATHLETE ACCOUNT MANAGEMENT APIs
+# ==========================================
+
+@app.route('/api/admin/athletes/<int:user_id>/activate', methods=['POST'])
+@admin_required
+def activate_athlete_account(user_id):
+    """API Endpoint to activate an athlete account."""
+    athlete = User.query.get(user_id)
+    if not athlete:
+        return jsonify({'status': 'error', 'message': 'Athlete user not found.'}), 404
+
+    if athlete.role == 'admin':
+        return jsonify({'status': 'error', 'message': 'Cannot modify administrator accounts.'}), 400
+
+    try:
+        athlete.account_status = 'active'
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': f"Athlete account for '{athlete.full_name}' has been activated successfully.",
+            'athlete': athlete.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to activate account.'}), 500
+
+
+@app.route('/api/admin/athletes/<int:user_id>/deactivate', methods=['POST'])
+@admin_required
+def deactivate_athlete_account(user_id):
+    """API Endpoint to deactivate an athlete account."""
+    admin_id = session.get('user_id')
+    if user_id == admin_id:
+        return jsonify({'status': 'error', 'message': 'You cannot deactivate your own account.'}), 400
+
+    athlete = User.query.get(user_id)
+    if not athlete:
+        return jsonify({'status': 'error', 'message': 'Athlete user not found.'}), 404
+
+    if athlete.role == 'admin':
+        return jsonify({'status': 'error', 'message': 'Cannot deactivate administrator accounts.'}), 400
+
+    try:
+        athlete.account_status = 'inactive'
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': f"Athlete account for '{athlete.full_name}' has been deactivated successfully.",
+            'athlete': athlete.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to deactivate account.'}), 500
+
+
+# ==========================================
+# ATHLETE NOTIFICATIONS APIs
+# ==========================================
+
+@app.route('/api/notifications', methods=['GET'])
+@login_required
+def get_athlete_notifications():
+    """API Endpoint returning notifications for the logged-in athlete."""
+    user_id = session.get('user_id')
+    notifications = Notification.query.filter_by(athlete_id=user_id).order_by(Notification.created_at.desc()).all()
+    unread_count = sum(1 for n in notifications if not n.is_read)
+
+    return jsonify({
+        'status': 'success',
+        'unread_count': unread_count,
+        'count': len(notifications),
+        'notifications': [n.to_dict() for n in notifications]
+    })
+
+
+@app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
+@login_required
+def mark_notification_read(notification_id):
+    """API Endpoint to mark a single notification as read."""
+    user_id = session.get('user_id')
+    notif = Notification.query.filter_by(id=notification_id, athlete_id=user_id).first()
+    if not notif:
+        return jsonify({'status': 'error', 'message': 'Notification not found.'}), 404
+
+    try:
+        notif.is_read = True
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Notification marked as read.'})
+    except Exception:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to update notification.'}), 500
+
+
+@app.route('/api/notifications/read-all', methods=['PUT'])
+@login_required
+def mark_all_notifications_read():
+    """API Endpoint to mark all notifications as read for current athlete."""
+    user_id = session.get('user_id')
+    try:
+        Notification.query.filter_by(athlete_id=user_id, is_read=False).update({Notification.is_read: True})
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'All notifications marked as read.'})
+    except Exception:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to update notifications.'}), 500
+
+
 @app.route('/logout')
 def logout():
     """Session logout handler."""
@@ -575,7 +989,23 @@ def profile():
     if not user:
         session.clear()
         return redirect(url_for('login'))
-    return render_template('profile.html', user=user)
+        
+    latest_rec = DailyHealthRecord.query.filter_by(user_id=user.id).order_by(
+        DailyHealthRecord.record_date.desc(),
+        DailyHealthRecord.id.desc()
+    ).first()
+
+    risk_info = {
+        'score': round(latest_rec.risk_score, 1) if (latest_rec and latest_rec.risk_score is not None) else None,
+        'label': latest_rec.risk_label if (latest_rec and latest_rec.risk_label) else 'Not Calculated'
+    }
+
+    # Calculate dynamic profile completion percentage
+    fields_to_check = [user.full_name, user.age, user.gender, user.primary_sport, user.email, user.phone, user.height_cm, user.weight_kg, user.emergency_name, user.emergency_relationship, user.emergency_phone, user.profile_photo]
+    completed_fields = sum(1 for f in fields_to_check if f is not None and str(f).strip() != '')
+    completion_pct = int((completed_fields / len(fields_to_check)) * 100)
+
+    return render_template('profile.html', user=user, risk_info=risk_info, completion_pct=completion_pct)
 
 
 @app.route('/api/profile', methods=['GET', 'POST'])
@@ -609,39 +1039,45 @@ def api_profile():
     if not email or '@' not in email:
         return jsonify({'status': 'error', 'message': 'Please enter a valid email address.'}), 400
 
-    try:
-        age_val = int(age)
-        if age_val <= 0 or age_val > 120:
-            return jsonify({'status': 'error', 'message': 'Age must be a valid positive number.'}), 400
-    except (ValueError, TypeError):
-        return jsonify({'status': 'error', 'message': 'Age must be a valid number.'}), 400
+    age_val = None
+    if age is not None and str(age).strip() != '':
+        try:
+            age_val = int(age)
+            if age_val <= 0 or age_val > 120:
+                return jsonify({'status': 'error', 'message': 'Age must be a valid positive number.'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'status': 'error', 'message': 'Age must be a valid number.'}), 400
 
-    try:
-        height_val = float(height_cm) if height_cm else 175.0
-        if height_val <= 0 or height_val > 300:
-            return jsonify({'status': 'error', 'message': 'Height must be a positive number.'}), 400
-    except (ValueError, TypeError):
-        return jsonify({'status': 'error', 'message': 'Height must be a valid number.'}), 400
+    height_val = None
+    if height_cm is not None and str(height_cm).strip() != '':
+        try:
+            height_val = float(height_cm)
+            if height_val <= 0 or height_val > 300:
+                return jsonify({'status': 'error', 'message': 'Height must be a positive number.'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'status': 'error', 'message': 'Height must be a valid number.'}), 400
 
-    try:
-        weight_val = float(weight_kg) if weight_kg else 70.0
-        if weight_val <= 0 or weight_val > 500:
-            return jsonify({'status': 'error', 'message': 'Weight must be a positive number.'}), 400
-    except (ValueError, TypeError):
-        return jsonify({'status': 'error', 'message': 'Weight must be a valid number.'}), 400
+    weight_val = None
+    if weight_kg is not None and str(weight_kg).strip() != '':
+        try:
+            weight_val = float(weight_kg)
+            if weight_val <= 0 or weight_val > 500:
+                return jsonify({'status': 'error', 'message': 'Weight must be a positive number.'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'status': 'error', 'message': 'Weight must be a valid number.'}), 400
 
     try:
         user.full_name = full_name
         user.email = email
         user.age = age_val
         user.gender = gender if gender else user.gender
-        user.phone = phone if phone else user.phone
+        user.phone = phone if phone else None
         user.primary_sport = primary_sport if primary_sport else user.primary_sport
         user.height_cm = height_val
         user.weight_kg = weight_val
-        user.emergency_name = emergency_name if emergency_name else user.emergency_name
-        user.emergency_relationship = emergency_relationship if emergency_relationship else user.emergency_relationship
-        user.emergency_phone = emergency_phone if emergency_phone else user.emergency_phone
+        user.emergency_name = emergency_name if emergency_name else None
+        user.emergency_relationship = emergency_relationship if emergency_relationship else None
+        user.emergency_phone = emergency_phone if emergency_phone else None
 
         db.session.commit()
 
@@ -1164,6 +1600,14 @@ def predict_injury_risk():
         record.injury_details = injury_details
         record.risk_score = prediction['risk_score']
         record.risk_label = prediction['risk_label']
+
+        risk_lbl_lower = (prediction['risk_label'] or '').lower()
+        if 'high' in risk_lbl_lower or 'medium' in risk_lbl_lower:
+            if not record.review_status or record.review_status == 'No Action Required':
+                record.review_status = 'Pending Review'
+        else:
+            if not record.review_status:
+                record.review_status = 'No Action Required'
 
         db.session.commit()
 

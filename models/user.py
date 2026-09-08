@@ -14,14 +14,15 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     
     # Profile & Health Metric Fields
-    phone = db.Column(db.String(20), nullable=True, default='+91 98765 43210')
-    height_cm = db.Column(db.Float, nullable=True, default=175.0)
-    weight_kg = db.Column(db.Float, nullable=True, default=70.0)
-    emergency_name = db.Column(db.String(100), nullable=True, default='Emergency Contact')
-    emergency_relationship = db.Column(db.String(50), nullable=True, default='Parent / Guardian')
-    emergency_phone = db.Column(db.String(20), nullable=True, default='+91 91234 56789')
-    profile_photo = db.Column(db.String(255), nullable=True) # Relative path: /static/uploads/profile_photos/ath_0001.jpg
+    phone = db.Column(db.String(20), nullable=True)
+    height_cm = db.Column(db.Float, nullable=True)
+    weight_kg = db.Column(db.Float, nullable=True)
+    emergency_name = db.Column(db.String(100), nullable=True)
+    emergency_relationship = db.Column(db.String(50), nullable=True)
+    emergency_phone = db.Column(db.String(20), nullable=True)
+    profile_photo = db.Column(db.String(255), nullable=True)
     role = db.Column(db.String(20), nullable=False, default='athlete')
+    account_status = db.Column(db.String(20), nullable=False, default='active')
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -54,7 +55,7 @@ class User(db.Model):
         if self.height_cm and self.height_cm > 0 and self.weight_kg and self.weight_kg > 0:
             height_m = self.height_cm / 100.0
             return round(self.weight_kg / (height_m * height_m), 1)
-        return 22.9
+        return None
 
     @property
     def bmi_category(self):
@@ -81,16 +82,17 @@ class User(db.Model):
             'gender': self.gender,
             'primary_sport': self.primary_sport,
             'email': self.email,
-            'phone': self.phone or '+91 98765 43210',
-            'height_cm': self.height_cm or 175.0,
-            'weight_kg': self.weight_kg or 70.0,
+            'phone': self.phone,
+            'height_cm': self.height_cm,
+            'weight_kg': self.weight_kg,
             'bmi': self.bmi,
             'bmi_category': self.bmi_category,
-            'emergency_name': self.emergency_name or 'Emergency Contact',
-            'emergency_relationship': self.emergency_relationship or 'Parent / Guardian',
-            'emergency_phone': self.emergency_phone or '+91 91234 56789',
+            'emergency_name': self.emergency_name,
+            'emergency_relationship': self.emergency_relationship,
+            'emergency_phone': self.emergency_phone,
             'profile_photo': self.profile_photo,
             'role': self.role or 'athlete',
+            'account_status': self.account_status or 'active',
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 

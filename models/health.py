@@ -18,6 +18,9 @@ class DailyHealthRecord(db.Model):
 
     risk_score = db.Column(db.Float, nullable=True)
     risk_label = db.Column(db.String(50), nullable=True)
+    review_status = db.Column(db.String(30), nullable=False, default='Pending Review')
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (
@@ -25,6 +28,8 @@ class DailyHealthRecord(db.Model):
     )
 
     def to_dict(self):
+        from models.user import User
+        reviewer = User.query.get(self.reviewed_by) if self.reviewed_by else None
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -38,5 +43,10 @@ class DailyHealthRecord(db.Model):
             'injury_details': self.injury_details or '',
             'risk_score': round(float(self.risk_score), 1) if self.risk_score is not None else None,
             'risk_label': self.risk_label or 'Not Calculated',
+            'review_status': self.review_status or 'Pending Review',
+            'reviewed_by': self.reviewed_by,
+            'reviewer_name': reviewer.full_name if reviewer else None,
+            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
+            'reviewed_at_formatted': self.reviewed_at.strftime('%b %d, %Y %I:%M %p') if self.reviewed_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
