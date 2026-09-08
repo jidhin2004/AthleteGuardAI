@@ -86,7 +86,7 @@
 
         <!-- Search & Filter Toolbar -->
         <div class="row g-3 my-3">
-          <div class="col-md-7 col-lg-8">
+          <div class="col-md-5">
             <div class="input-group">
               <span class="input-group-text bg-white border-end-0 text-muted">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -95,14 +95,28 @@
             </div>
           </div>
 
-          <div class="col-md-5 col-lg-4">
+          <div class="col-md-3">
             <div class="d-flex align-items-center gap-2">
-              <label for="predictionRiskFilter" class="form-label mb-0 text-nowrap fw-semibold fs-7 text-muted">Risk Level:</label>
+              <label for="predictionRiskFilter" class="form-label mb-0 text-nowrap fw-semibold fs-7 text-muted">Risk:</label>
               <select class="form-select" id="predictionRiskFilter">
                 <option value="all">All Risk Levels</option>
                 <option value="low">Low Risk</option>
                 <option value="medium">Medium Risk</option>
                 <option value="high">High Risk</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="d-flex align-items-center gap-2">
+              <label for="predictionStatusFilter" class="form-label mb-0 text-nowrap fw-semibold fs-7 text-muted">Case Status:</label>
+              <select class="form-select" id="predictionStatusFilter">
+                <option value="all">All Statuses</option>
+                <option value="Pending Review">Pending Review</option>
+                <option value="Under Review">Under Review</option>
+                <option value="Needs Attention">Needs Attention</option>
+                <option value="Monitoring">Monitoring</option>
+                <option value="Resolved">Resolved</option>
               </select>
             </div>
           </div>
@@ -125,18 +139,19 @@
           <p class="text-muted fs-7 mb-0">No machine learning predictions match your risk filter or search criteria.</p>
         </div>
 
-        <!-- Predictions Table -->
+        <!-- Predictions & Case Reviews Table -->
         <div id="predictionsContentArea" style="display: none;">
           <div class="table-responsive mt-3">
             <table class="table custom-table align-middle text-nowrap">
               <thead>
                 <tr>
                   <th style="min-width: 170px;">Athlete</th>
-                  <th style="min-width: 130px;">Sport</th>
-                  <th style="min-width: 120px;">Date</th>
-                  <th style="min-width: 140px;">Predicted Risk</th>
-                  <th style="min-width: 110px;">Risk Score</th>
-                  <th style="min-width: 110px;">Sleep / Training</th>
+                  <th style="min-width: 120px;">Sport</th>
+                  <th style="min-width: 110px;">Date</th>
+                  <th style="min-width: 130px;">Predicted Risk</th>
+                  <th style="min-width: 100px;">Score</th>
+                  <th style="min-width: 140px;">Case Status</th>
+                  <th style="min-width: 130px;" class="text-center">Action</th>
                 </tr>
               </thead>
               <tbody id="predictionsTableBody">
@@ -151,6 +166,139 @@
     </main>
   </div>
 
+</div>
+
+<!-- Admin Prediction Case Review Modal -->
+<div class="modal fade" id="caseReviewModal" tabindex="-1" aria-labelledby="caseReviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      
+      <div class="modal-header bg-dark text-white rounded-top-4 px-4 py-3">
+        <h5 class="modal-title font-heading fw-bold" id="caseReviewModalLabel">
+          <i class="fa-solid fa-notes-medical text-info me-2"></i> Review Prediction Case
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-4" style="max-height: 78vh; overflow-y: auto;">
+        
+        <!-- Case Header Overview -->
+        <div class="card bg-light border p-3 rounded-3 mb-4">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <h5 class="fw-bold text-dark mb-1" id="modalAthleteName">--</h5>
+              <div class="fs-7 text-muted">
+                <span class="badge bg-secondary-subtle text-dark me-2" id="modalAthleteId">--</span>
+                <span class="me-2" id="modalAthleteSport">--</span> • 
+                <span class="ms-2" id="modalRecordDate">--</span>
+              </div>
+            </div>
+
+            <div class="text-end">
+              <div id="modalRiskBadge">--</div>
+              <div class="fw-bold fs-5 text-dark mt-1" id="modalRiskScore">--% Score</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Biometric Health Parameters Grid -->
+        <h6 class="fw-bold text-primary mb-3 text-uppercase fs-7 letter-spacing-1">
+          <i class="fa-solid fa-heart-pulse me-1"></i> Biometric Health Parameters
+        </h6>
+
+        <div class="row g-3 mb-4">
+          <div class="col-sm-4">
+            <div class="p-2.5 bg-white border rounded-3">
+              <div class="fs-8 text-muted">Sleep Duration</div>
+              <div class="fw-bold text-dark" id="modalSleep">-- hrs</div>
+            </div>
+          </div>
+
+          <div class="col-sm-4">
+            <div class="p-2.5 bg-white border rounded-3">
+              <div class="fs-8 text-muted">Training Load</div>
+              <div class="fw-bold text-dark" id="modalTraining">-- hrs</div>
+            </div>
+          </div>
+
+          <div class="col-sm-4">
+            <div class="p-2.5 bg-white border rounded-3">
+              <div class="fs-8 text-muted">Resting Heart Rate</div>
+              <div class="fw-bold text-dark" id="modalHR">-- BPM</div>
+            </div>
+          </div>
+
+          <div class="col-sm-4">
+            <div class="p-2.5 bg-white border rounded-3">
+              <div class="fs-8 text-muted">Fatigue Level</div>
+              <div class="fw-bold text-dark" id="modalFatigue">Level --/10</div>
+            </div>
+          </div>
+
+          <div class="col-sm-4">
+            <div class="p-2.5 bg-white border rounded-3">
+              <div class="fs-8 text-muted">Stress Level</div>
+              <div class="fw-bold text-dark" id="modalStress">Level --/10</div>
+            </div>
+          </div>
+
+          <div class="col-sm-4">
+            <div class="p-2.5 bg-white border rounded-3">
+              <div class="fs-8 text-muted">Previous Injury</div>
+              <div class="fw-bold text-dark" id="modalPrevInjury">--</div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Case Status Update Controls -->
+        <h6 class="fw-bold text-primary mb-3 text-uppercase fs-7 letter-spacing-1">
+          <i class="fa-solid fa-sliders me-1"></i> Update Case Review Status
+        </h6>
+
+        <div class="mb-4">
+          <label for="modalReviewStatusSelect" class="form-label fw-semibold fs-7 text-muted">Select New Status:</label>
+          <select class="form-select form-select-lg fw-bold" id="modalReviewStatusSelect">
+            <option value="Pending Review">Pending Review</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Needs Attention">Needs Attention</option>
+            <option value="Monitoring">Monitoring</option>
+            <option value="Resolved">Resolved</option>
+            <option value="No Action Required">No Action Required</option>
+          </select>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Send Notification to Athlete Section -->
+        <h6 class="fw-bold text-primary mb-3 text-uppercase fs-7 letter-spacing-1">
+          <i class="fa-solid fa-bell me-1"></i> Send Notification to Athlete
+        </h6>
+
+        <div id="modalNotesHistory" class="mb-3">
+          <!-- Populated dynamically -->
+        </div>
+
+        <div class="form-group mb-2">
+          <label for="modalNewNoteInput" class="form-label fw-semibold fs-7 text-muted">Enter recommendation or message for the athlete:</label>
+          <textarea class="form-control" id="modalNewNoteInput" rows="3" placeholder="Enter recommendation or message for the athlete..."></textarea>
+          <span class="fs-8 text-muted mt-1 d-block">
+            <strong>Example:</strong> "Your recent health assessment has been reviewed. Please monitor your recovery and consider reducing training intensity."
+          </span>
+        </div>
+
+      </div>
+
+      <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+        <button type="button" class="btn btn-outline-secondary fw-semibold px-4 rounded-3" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm" id="btnSendNotification">
+          <i class="fa-solid fa-paper-plane me-1"></i> Send Notification
+        </button>
+      </div>
+
+    </div>
+  </div>
 </div>
 {% endblock %}
 

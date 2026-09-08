@@ -118,10 +118,10 @@
       <!-- Main Dashboard Content Container -->
       <div id="adminDashboardContent" style="display: none;">
         
-        <!-- 4 Statistics Cards -->
-        <div class="row g-4 mb-4">
+        <!-- 6 Dynamic Statistics Cards -->
+        <div class="row g-3 mb-4">
           
-          <div class="col-sm-6 col-xl-3">
+          <div class="col-sm-6 col-xl-2">
             <div class="stat-card-widget">
               <div class="stat-icon-wrapper stat-icon-blue">
                 <i class="fa-solid fa-users"></i>
@@ -129,38 +129,35 @@
               <div>
                 <div class="stat-card-val" id="statTotalAthletes">--</div>
                 <div class="stat-card-lbl">Total Athletes</div>
-                <div class="stat-card-sub">Registered Users</div>
               </div>
             </div>
           </div>
 
-          <div class="col-sm-6 col-xl-3">
+          <div class="col-sm-6 col-xl-2">
             <div class="stat-card-widget">
-              <div class="stat-icon-wrapper stat-icon-purple">
-                <i class="fa-solid fa-notes-medical"></i>
+              <div class="stat-icon-wrapper" style="background-color: rgba(34, 197, 94, 0.12); color: #16a34a;">
+                <i class="fa-solid fa-user-check"></i>
               </div>
               <div>
-                <div class="stat-card-val" id="statHealthRecords">--</div>
-                <div class="stat-card-lbl">Health Records</div>
-                <div class="stat-card-sub">Daily Submissions</div>
+                <div class="stat-card-val text-success" id="statActiveAthletes">--</div>
+                <div class="stat-card-lbl">Active Athletes</div>
               </div>
             </div>
           </div>
 
-          <div class="col-sm-6 col-xl-3">
+          <div class="col-sm-6 col-xl-2">
             <div class="stat-card-widget">
-              <div class="stat-icon-wrapper stat-icon-amber">
-                <i class="fa-solid fa-clock-rotate-left"></i>
+              <div class="stat-icon-wrapper" style="background-color: rgba(100, 116, 139, 0.12); color: #64748b;">
+                <i class="fa-solid fa-user-slash"></i>
               </div>
               <div>
-                <div class="stat-card-val" id="statTotalPredictions">--</div>
-                <div class="stat-card-lbl">Total Predictions</div>
-                <div class="stat-card-sub">ML Classifications</div>
+                <div class="stat-card-val text-secondary" id="statInactiveAthletes">--</div>
+                <div class="stat-card-lbl">Inactive Athletes</div>
               </div>
             </div>
           </div>
 
-          <div class="col-sm-6 col-xl-3">
+          <div class="col-sm-6 col-xl-2">
             <div class="stat-card-widget">
               <div class="stat-icon-wrapper" style="background-color: rgba(239, 68, 68, 0.12); color: #dc2626;">
                 <i class="fa-solid fa-triangle-exclamation"></i>
@@ -168,7 +165,30 @@
               <div>
                 <div class="stat-card-val text-danger" id="statHighRisk">--</div>
                 <div class="stat-card-lbl">High Risk Cases</div>
-                <div class="stat-card-sub">Requires Attention</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-sm-6 col-xl-2">
+            <div class="stat-card-widget">
+              <div class="stat-icon-wrapper stat-icon-amber">
+                <i class="fa-solid fa-shield-virus"></i>
+              </div>
+              <div>
+                <div class="stat-card-val text-warning" id="statMediumRisk">--</div>
+                <div class="stat-card-lbl">Medium Risk Cases</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-sm-6 col-xl-2">
+            <div class="stat-card-widget">
+              <div class="stat-icon-wrapper stat-icon-purple">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+              </div>
+              <div>
+                <div class="stat-card-val text-primary" id="statPendingReviews">--</div>
+                <div class="stat-card-lbl">Pending Reviews</div>
               </div>
             </div>
           </div>
@@ -219,6 +239,35 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- Priority Cases Section (High & Medium Risk Cases Needing Review) -->
+        <div class="card-master mb-4 border-danger shadow-sm" id="priorityCasesSection">
+          <div class="card-header-master bg-danger bg-opacity-10 py-3">
+            <h3 class="card-title-master text-danger">
+              <i class="fa-solid fa-triangle-exclamation me-2"></i> Priority Cases (Requires Review)
+            </h3>
+            <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold fs-8" id="priorityCasesCountBadge">0 Cases</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table custom-table align-middle text-nowrap">
+              <thead>
+                <tr>
+                  <th>Athlete</th>
+                  <th>Sport</th>
+                  <th>Risk Level</th>
+                  <th>Risk Score</th>
+                  <th>Record Date</th>
+                  <th>Case Status</th>
+                  <th class="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="priorityCasesTableBody">
+                <!-- Populated via static/js/admin_dashboard.js -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- Recent Predictions Section -->

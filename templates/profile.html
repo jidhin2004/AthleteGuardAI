@@ -90,6 +90,27 @@
           <span>Random Forest Model Active</span>
         </div>
 
+        <!-- Athlete Notifications Bell Dropdown -->
+        <div class="dropdown me-2" id="athleteNotificationDropdown">
+          <button class="header-action-icon position-relative border-0 bg-transparent" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btnNotificationBell" title="Notifications">
+            <i class="fa-regular fa-bell fs-5 text-dark"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none; font-size: 0.65rem;">0</span>
+          </button>
+
+          <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-0" style="width: 340px; max-height: 420px; overflow-y: auto; z-index: 1060;">
+            <div class="dropdown-header bg-dark text-white rounded-top-3 px-3 py-2.5 d-flex justify-content-between align-items-center">
+              <span class="fw-bold"><i class="fa-solid fa-bell text-info me-1"></i> Notifications</span>
+              <button type="button" class="btn btn-link btn-sm text-info text-decoration-none p-0 fs-8 fw-semibold" id="btnMarkAllRead" onclick="markAllNotificationsRead(event)">Mark all as read</button>
+            </div>
+            
+            <div id="notificationsList" class="p-2">
+              <div class="text-center py-3 text-muted fs-7">
+                <div class="spinner-border spinner-border-sm text-primary me-1"></div> Loading notifications...
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="d-flex align-items-center gap-2 ms-2">
           <div class="avatar-circle" id="topbarAvatarCircle" style="width: 36px; height: 36px; font-size: 0.9rem;">
             {% if user.profile_photo %}
@@ -174,19 +195,25 @@
           <div class="d-flex align-items-center gap-2">
             <i class="fa-regular fa-calendar-check text-primary"></i>
             <span class="text-muted">Member Since:</span>
-            <strong class="text-dark">August 2026</strong>
+            <strong class="text-dark">{{ user.created_at.strftime('%B %Y') if user.created_at else 'August 2026' }}</strong>
           </div>
 
           <div class="d-flex align-items-center gap-2">
             <i class="fa-solid fa-heart-pulse text-success"></i>
             <span class="text-muted">Current Injury Risk:</span>
-            <strong class="text-success">Low Risk (18%)</strong>
+            {% if risk_info is defined and risk_info and risk_info.score is not none %}
+              <strong class="{% if risk_info.score > 65 %}text-danger{% elif risk_info.score > 30 %}text-warning{% else %}text-success{% endif %}">
+                {{ risk_info.label }} ({{ risk_info.score }}%)
+              </strong>
+            {% else %}
+              <strong class="text-muted">Not Calculated</strong>
+            {% endif %}
           </div>
 
           <div class="d-flex align-items-center gap-2">
             <i class="fa-solid fa-clipboard-check text-info"></i>
             <span class="text-muted">Profile Completion:</span>
-            <strong class="text-primary">100% Complete</strong>
+            <strong class="text-primary">{{ completion_pct if completion_pct is defined else 100 }}% Complete</strong>
           </div>
         </div>
       </div>
@@ -214,14 +241,14 @@
               <div class="col-sm-6">
                 <div class="profile-detail-box">
                   <div class="profile-detail-label">Age</div>
-                  <div class="profile-detail-value" id="viewAge">{{ user.age }} years</div>
+                  <div class="profile-detail-value" id="viewAge">{{ user.age ~ ' years' if user.age else 'Not provided' }}</div>
                 </div>
               </div>
 
               <div class="col-sm-6">
                 <div class="profile-detail-box">
                   <div class="profile-detail-label">Gender</div>
-                  <div class="profile-detail-value" id="viewGender">{{ user.gender }}</div>
+                  <div class="profile-detail-value" id="viewGender">{{ user.gender if user.gender else 'Not provided' }}</div>
                 </div>
               </div>
 
@@ -235,7 +262,7 @@
               <div class="col-12">
                 <div class="profile-detail-box">
                   <div class="profile-detail-label">Phone Number</div>
-                  <div class="profile-detail-value" id="viewPhone">{{ user.phone }}</div>
+                  <div class="profile-detail-value" id="viewPhone">{{ user.phone if user.phone else 'Not provided' }}</div>
                 </div>
               </div>
             </div>
@@ -263,14 +290,14 @@
               <div class="col-sm-3">
                 <div class="profile-detail-box">
                   <div class="profile-detail-label">Height</div>
-                  <div class="profile-detail-value" id="viewHeight">{{ user.height_cm }} cm</div>
+                  <div class="profile-detail-value" id="viewHeight">{{ user.height_cm ~ ' cm' if user.height_cm else 'Not provided' }}</div>
                 </div>
               </div>
 
               <div class="col-sm-3">
                 <div class="profile-detail-box">
                   <div class="profile-detail-label">Weight</div>
-                  <div class="profile-detail-value" id="viewWeight">{{ user.weight_kg }} kg</div>
+                  <div class="profile-detail-value" id="viewWeight">{{ user.weight_kg ~ ' kg' if user.weight_kg else 'Not provided' }}</div>
                 </div>
               </div>
 
@@ -280,7 +307,7 @@
                   <div>
                     <div class="profile-detail-label text-dark">Body Mass Index (BMI)</div>
                     <div class="d-flex align-items-baseline gap-2 mt-1">
-                      <span class="font-heading fw-bold fs-2 text-dark" id="viewBmiVal">{{ user.bmi }}</span>
+                      <span class="font-heading fw-bold fs-2 text-dark" id="viewBmiVal">{{ user.bmi if user.bmi else 'N/A' }}</span>
                       <span class="{{ user.bmi_category.badge_class }} fs-7 px-3 py-1 fw-semibold" id="viewBmiBadge">
                         {{ user.bmi_category.label }}
                       </span>
@@ -315,21 +342,21 @@
           <div class="col-md-4">
             <div class="profile-detail-box">
               <div class="profile-detail-label">Contact Name</div>
-              <div class="profile-detail-value" id="viewEmergencyName">{{ user.emergency_name }}</div>
+              <div class="profile-detail-value" id="viewEmergencyName">{{ user.emergency_name if user.emergency_name else 'Not provided' }}</div>
             </div>
           </div>
 
           <div class="col-md-4">
             <div class="profile-detail-box">
               <div class="profile-detail-label">Relationship</div>
-              <div class="profile-detail-value" id="viewEmergencyRel">{{ user.emergency_relationship }}</div>
+              <div class="profile-detail-value" id="viewEmergencyRel">{{ user.emergency_relationship if user.emergency_relationship else 'Not provided' }}</div>
             </div>
           </div>
 
           <div class="col-md-4">
             <div class="profile-detail-box">
               <div class="profile-detail-label">Emergency Phone Number</div>
-              <div class="profile-detail-value text-danger" id="viewEmergencyPhone">{{ user.emergency_phone }}</div>
+              <div class="profile-detail-value text-danger" id="viewEmergencyPhone">{{ user.emergency_phone if user.emergency_phone else 'Not provided' }}</div>
             </div>
           </div>
         </div>
@@ -431,8 +458,8 @@
 
             <div class="col-md-6 form-group">
               <label for="editPhone" class="form-label">Phone Number</label>
-              <input type="tel" class="form-control" id="editPhone" value="{{ user.phone }}" required>
-              <div class="invalid-feedback" id="phoneError">Phone number is required.</div>
+              <input type="tel" class="form-control" id="editPhone" value="{{ user.phone or '' }}">
+              <div class="invalid-feedback" id="phoneError">Enter valid phone number.</div>
             </div>
           </div>
 
@@ -444,7 +471,7 @@
               <i class="fa-solid fa-dumbbell me-1"></i> Athletic & Body Metrics
             </h6>
             <span id="liveBmiBadge" class="{{ user.bmi_category.badge_class }}">
-              BMI: {{ user.bmi }} ({{ user.bmi_category.label }})
+              BMI: {{ user.bmi if user.bmi else 'N/A' }} ({{ user.bmi_category.label }})
             </span>
           </div>
 
@@ -466,13 +493,13 @@
 
             <div class="col-md-4 form-group">
               <label for="editHeight" class="form-label">Height (cm)</label>
-              <input type="number" step="0.5" class="form-control" id="editHeight" value="{{ user.height_cm }}" required>
+              <input type="number" step="0.5" class="form-control" id="editHeight" value="{{ user.height_cm or '' }}">
               <div class="invalid-feedback" id="heightError">Enter positive height in cm.</div>
             </div>
 
             <div class="col-md-4 form-group">
               <label for="editWeight" class="form-label">Weight (kg)</label>
-              <input type="number" step="0.5" class="form-control" id="editWeight" value="{{ user.weight_kg }}" required>
+              <input type="number" step="0.5" class="form-control" id="editWeight" value="{{ user.weight_kg or '' }}">
               <div class="invalid-feedback" id="weightError">Enter positive weight in kg.</div>
             </div>
           </div>
@@ -487,17 +514,17 @@
           <div class="row g-3">
             <div class="col-md-4 form-group">
               <label for="editEmergencyName" class="form-label">Contact Name</label>
-              <input type="text" class="form-control" id="editEmergencyName" value="{{ user.emergency_name }}">
+              <input type="text" class="form-control" id="editEmergencyName" value="{{ user.emergency_name or '' }}">
             </div>
 
             <div class="col-md-4 form-group">
               <label for="editEmergencyRelationship" class="form-label">Relationship</label>
-              <input type="text" class="form-control" id="editEmergencyRelationship" value="{{ user.emergency_relationship }}">
+              <input type="text" class="form-control" id="editEmergencyRelationship" value="{{ user.emergency_relationship or '' }}">
             </div>
 
             <div class="col-md-4 form-group">
               <label for="editEmergencyPhone" class="form-label">Contact Phone</label>
-              <input type="tel" class="form-control" id="editEmergencyPhone" value="{{ user.emergency_phone }}">
+              <input type="tel" class="form-control" id="editEmergencyPhone" value="{{ user.emergency_phone or '' }}">
             </div>
           </div>
 

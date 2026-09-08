@@ -60,9 +60,27 @@
         Sign in securely to access your AthleteGuard AI Dashboard and monitor your health using AI-powered injury prediction.
       </p>
 
+      {% if error_msg %}
+      <div class="alert alert-danger alert-custom shadow-sm mb-3" role="alert">
+        <i class="fa-solid fa-triangle-exclamation fs-5 me-2"></i>
+        <div>{{ error_msg }}</div>
+      </div>
+      {% endif %}
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-custom shadow-sm mb-3" role="alert">
+              <i class="fa-solid fa-circle-info fs-5 me-2"></i>
+              <div>{{ message }}</div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
       {% if success_msg %}
-      <div class="alert alert-success alert-custom shadow-sm" role="alert">
-        <i class="fa-solid fa-circle-check fs-5"></i>
+      <div class="alert alert-success alert-custom shadow-sm mb-3" role="alert">
+        <i class="fa-solid fa-circle-check fs-5 me-2"></i>
         <div>{{ success_msg }}</div>
       </div>
       {% endif %}

@@ -90,9 +90,26 @@
           <span id="headerModelStatus">Random Forest Model Active</span>
         </div>
 
-        <a href="#" class="header-action-icon" title="Notifications" aria-label="Notifications">
-          <i class="fa-regular fa-bell"></i>
-        </a>
+        <!-- Athlete Notifications Bell Dropdown -->
+        <div class="dropdown me-2" id="athleteNotificationDropdown">
+          <button class="header-action-icon position-relative border-0 bg-transparent" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btnNotificationBell" title="Notifications">
+            <i class="fa-regular fa-bell fs-5 text-dark"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none; font-size: 0.65rem;">0</span>
+          </button>
+
+          <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-0" style="width: 340px; max-height: 420px; overflow-y: auto; z-index: 1060;">
+            <div class="dropdown-header bg-dark text-white rounded-top-3 px-3 py-2.5 d-flex justify-content-between align-items-center">
+              <span class="fw-bold"><i class="fa-solid fa-bell text-info me-1"></i> Notifications</span>
+              <button type="button" class="btn btn-link btn-sm text-info text-decoration-none p-0 fs-8 fw-semibold" id="btnMarkAllRead" onclick="markAllNotificationsRead(event)">Mark all as read</button>
+            </div>
+            
+            <div id="notificationsList" class="p-2">
+              <div class="text-center py-3 text-muted fs-7">
+                <div class="spinner-border spinner-border-sm text-primary me-1"></div> Loading notifications...
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="d-flex align-items-center gap-2 ms-2">
           <div class="avatar-circle" style="width: 36px; height: 36px; font-size: 0.9rem;">

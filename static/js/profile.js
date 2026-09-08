@@ -201,12 +201,18 @@ function updateAllAvatarsUI(photoUrl) {
 }
 
 function updateLiveBmiPreview() {
-  const hVal = parseFloat(document.getElementById('editHeight').value);
-  const wVal = parseFloat(document.getElementById('editWeight').value);
+  const hRaw = document.getElementById('editHeight').value.trim();
+  const wRaw = document.getElementById('editWeight').value.trim();
   const bmiBadge = document.getElementById('liveBmiBadge');
 
-  if (isNaN(hVal) || isNaN(wVal) || hVal <= 0 || wVal <= 0) {
-    if (bmiBadge) bmiBadge.textContent = 'BMI: --';
+  const hVal = parseFloat(hRaw);
+  const wVal = parseFloat(wRaw);
+
+  if (!hRaw || !wRaw || isNaN(hVal) || isNaN(wVal) || hVal <= 0 || wVal <= 0) {
+    if (bmiBadge) {
+      bmiBadge.className = 'badge bg-secondary';
+      bmiBadge.textContent = 'BMI: N/A';
+    }
     return;
   }
 
@@ -249,10 +255,10 @@ async function handleProfileSave(e) {
   if (errorAlert) errorAlert.style.display = 'none';
 
   const fullName = document.getElementById('editFullName').value.trim();
-  const age = parseInt(document.getElementById('editAge').value);
+  const ageRaw = document.getElementById('editAge').value.trim();
   const email = document.getElementById('editEmail').value.trim();
-  const height = parseFloat(document.getElementById('editHeight').value);
-  const weight = parseFloat(document.getElementById('editWeight').value);
+  const heightRaw = document.getElementById('editHeight').value.trim();
+  const weightRaw = document.getElementById('editWeight').value.trim();
   const phone = document.getElementById('editPhone').value.trim();
 
   let isValid = true;
@@ -264,7 +270,8 @@ async function handleProfileSave(e) {
     markValid('editFullName', 'fullNameError');
   }
 
-  if (isNaN(age) || age <= 0 || age > 120) {
+  const age = parseInt(ageRaw);
+  if (!ageRaw || isNaN(age) || age <= 0 || age > 120) {
     markInvalid('editAge', 'ageError', 'Enter a valid positive age.');
     isValid = false;
   } else {
@@ -278,26 +285,33 @@ async function handleProfileSave(e) {
     markValid('editEmail', 'emailError');
   }
 
-  if (isNaN(height) || height <= 0 || height > 300) {
-    markInvalid('editHeight', 'heightError', 'Enter a positive height in cm.');
-    isValid = false;
+  let height = null;
+  if (heightRaw !== '') {
+    height = parseFloat(heightRaw);
+    if (isNaN(height) || height <= 0 || height > 300) {
+      markInvalid('editHeight', 'heightError', 'Enter a positive height in cm.');
+      isValid = false;
+    } else {
+      markValid('editHeight', 'heightError');
+    }
   } else {
     markValid('editHeight', 'heightError');
   }
 
-  if (isNaN(weight) || weight <= 0 || weight > 500) {
-    markInvalid('editWeight', 'weightError', 'Enter a positive weight in kg.');
-    isValid = false;
+  let weight = null;
+  if (weightRaw !== '') {
+    weight = parseFloat(weightRaw);
+    if (isNaN(weight) || weight <= 0 || weight > 500) {
+      markInvalid('editWeight', 'weightError', 'Enter a positive weight in kg.');
+      isValid = false;
+    } else {
+      markValid('editWeight', 'weightError');
+    }
   } else {
     markValid('editWeight', 'weightError');
   }
 
-  if (!phone) {
-    markInvalid('editPhone', 'phoneError', 'Phone number is required.');
-    isValid = false;
-  } else {
-    markValid('editPhone', 'phoneError');
-  }
+  markValid('editPhone', 'phoneError');
 
   if (!isValid) return;
 
@@ -375,10 +389,10 @@ function updateProfileViewUI(u) {
   const phoneVal = document.getElementById('viewPhone');
 
   if (nameVal) nameVal.textContent = u.full_name;
-  if (ageVal) ageVal.textContent = `${u.age} years`;
-  if (genderVal) genderVal.textContent = u.gender;
+  if (ageVal) ageVal.textContent = u.age ? `${u.age} years` : 'Not provided';
+  if (genderVal) genderVal.textContent = u.gender || 'Not provided';
   if (emailVal) emailVal.textContent = u.email;
-  if (phoneVal) phoneVal.textContent = u.phone;
+  if (phoneVal) phoneVal.textContent = u.phone || 'Not provided';
 
   const sportVal = document.getElementById('viewSport');
   const heightVal = document.getElementById('viewHeight');
@@ -387,9 +401,9 @@ function updateProfileViewUI(u) {
   const bmiBadge = document.getElementById('viewBmiBadge');
 
   if (sportVal) sportVal.textContent = u.primary_sport;
-  if (heightVal) heightVal.textContent = `${u.height_cm} cm`;
-  if (weightVal) weightVal.textContent = `${u.weight_kg} kg`;
-  if (bmiVal) bmiVal.textContent = u.bmi;
+  if (heightVal) heightVal.textContent = u.height_cm ? `${u.height_cm} cm` : 'Not provided';
+  if (weightVal) weightVal.textContent = u.weight_kg ? `${u.weight_kg} kg` : 'Not provided';
+  if (bmiVal) bmiVal.textContent = u.bmi ? u.bmi : 'N/A';
   if (bmiBadge && u.bmi_category) {
     bmiBadge.className = u.bmi_category.badge_class;
     bmiBadge.textContent = u.bmi_category.label;
@@ -399,9 +413,9 @@ function updateProfileViewUI(u) {
   const emRel = document.getElementById('viewEmergencyRel');
   const emPhone = document.getElementById('viewEmergencyPhone');
 
-  if (emName) emName.textContent = u.emergency_name;
-  if (emRel) emRel.textContent = u.emergency_relationship;
-  if (emPhone) emPhone.textContent = u.emergency_phone;
+  if (emName) emName.textContent = u.emergency_name || 'Not provided';
+  if (emRel) emRel.textContent = u.emergency_relationship || 'Not provided';
+  if (emPhone) emPhone.textContent = u.emergency_phone || 'Not provided';
 }
 
 function markInvalid(inputId, errorId, message) {

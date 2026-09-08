@@ -128,13 +128,13 @@
             <table class="table custom-table align-middle text-nowrap">
               <thead>
                 <tr>
-                  <th style="min-width: 120px;">Athlete ID</th>
-                  <th style="min-width: 180px;">Name</th>
-                  <th style="min-width: 200px;">Email</th>
-                  <th style="min-width: 140px;">Primary Sport</th>
-                  <th style="min-width: 80px;">Age</th>
-                  <th style="min-width: 130px;">Registered</th>
-                  <th style="min-width: 120px;" class="text-center">Action</th>
+                  <th style="min-width: 110px;">Athlete ID</th>
+                  <th style="min-width: 170px;">Name</th>
+                  <th style="min-width: 190px;">Email</th>
+                  <th style="min-width: 130px;">Primary Sport</th>
+                  <th style="min-width: 110px;">Status</th>
+                  <th style="min-width: 120px;">Registered</th>
+                  <th style="min-width: 160px;" class="text-center">Action</th>
                 </tr>
               </thead>
               <tbody id="athletesTableBody">
@@ -149,6 +149,35 @@
     </main>
   </div>
 
+</div>
+
+<!-- Athlete Account Status Change Confirmation Modal -->
+<div class="modal fade" id="accountStatusModal" tabindex="-1" aria-labelledby="accountStatusModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      
+      <div class="modal-header bg-dark text-white rounded-top-4 px-4 py-3">
+        <h5 class="modal-title font-heading fw-bold" id="accountStatusModalLabel">
+          <i class="fa-solid fa-user-gear text-warning me-2"></i> Confirm Account Status Change
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-4 text-center">
+        <div class="mb-3" id="statusModalIconContainer">
+          <i class="fa-solid fa-triangle-exclamation fa-3x text-warning"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-2" id="statusModalTitle">Confirm Action</h5>
+        <p class="text-muted fs-7 mb-0" id="statusModalBodyText">Are you sure you want to change this athlete's account status?</p>
+      </div>
+
+      <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+        <button type="button" class="btn btn-outline-secondary fw-semibold px-4 rounded-3" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger fw-bold px-4 rounded-3 shadow-sm" id="btnConfirmStatusChange">Confirm</button>
+      </div>
+
+    </div>
+  </div>
 </div>
 {% endblock %}
 

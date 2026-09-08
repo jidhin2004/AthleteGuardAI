@@ -55,4 +55,89 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   });
+
+  // Athlete Notification Handler
+  if (document.getElementById('athleteNotificationDropdown')) {
+    fetchAthleteNotifications();
+  }
 });
+
+function fetchAthleteNotifications() {
+  fetch('/api/notifications')
+    .then(res => res.json())
+    .then(data => {
+      if (data.status !== 'success') return;
+
+      const badge = document.getElementById('notificationBadge');
+      const list = document.getElementById('notificationsList');
+
+      if (badge) {
+        if (data.unread_count > 0) {
+          badge.textContent = data.unread_count;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+
+      if (list) {
+        if (!data.notifications || data.notifications.length === 0) {
+          list.innerHTML = `
+            <div class="text-center py-4 text-muted fs-7">
+              <i class="fa-solid fa-bell-slash text-slate-300 fs-4 mb-2 d-block"></i>
+              No new notifications.
+            </div>`;
+          return;
+        }
+
+        list.innerHTML = data.notifications.map(n => `
+          <div class="p-3 mb-2 rounded-3 border ${n.is_read ? 'bg-light border-light-subtle' : 'bg-primary-subtle border-primary-subtle'}" style="transition: all 0.2s;">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-1.5">
+              <span class="fw-bold fs-7 ${n.is_read ? 'text-secondary' : 'text-dark'}">
+                <span class="me-1">${n.is_read ? '○' : '●'}</span>
+                Health Assessment Reviewed
+              </span>
+              <span class="fs-8 text-muted">${n.created_at_formatted}</span>
+            </div>
+            <p class="fs-7 text-dark mb-2" style="line-height: 1.4; background: rgba(255,255,255,0.75); padding: 8px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.05);">
+              <strong class="d-block text-primary fs-8 mb-1">Recommendation:</strong>
+              ${escapeHtml(n.message)}
+            </p>
+            ${!n.is_read ? `
+              <div class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold fs-8" onclick="markNotificationRead(${n.id})">
+                  Mark as Read
+                </button>
+              </div>` : ''}
+          </div>
+        `).join('');
+      }
+    })
+    .catch(err => console.error('Notification error:', err));
+}
+
+function markNotificationRead(id) {
+  fetch(`/api/notifications/${id}/read`, { method: 'PUT' })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') fetchAthleteNotifications();
+    });
+}
+
+function markAllNotificationsRead(e) {
+  if (e) e.preventDefault();
+  fetch('/api/notifications/read-all', { method: 'PUT' })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') fetchAthleteNotifications();
+    });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}

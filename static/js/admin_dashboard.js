@@ -40,13 +40,18 @@ function fetchAdminStats() {
       if (contentEl) contentEl.style.display = 'block';
 
       // Update Statistic Cards
-      document.getElementById('statTotalAthletes').textContent = data.stats.total_athletes;
-      document.getElementById('statHealthRecords').textContent = data.stats.total_health_records;
-      document.getElementById('statTotalPredictions').textContent = data.stats.total_predictions;
-      document.getElementById('statHighRisk').textContent = data.stats.high_risk_count;
+      document.getElementById('statTotalAthletes').textContent = data.stats.total_athletes || 0;
+      if (document.getElementById('statActiveAthletes')) document.getElementById('statActiveAthletes').textContent = data.stats.active_athletes || 0;
+      if (document.getElementById('statInactiveAthletes')) document.getElementById('statInactiveAthletes').textContent = data.stats.inactive_athletes || 0;
+      document.getElementById('statHighRisk').textContent = data.stats.high_risk_count || 0;
+      if (document.getElementById('statMediumRisk')) document.getElementById('statMediumRisk').textContent = data.stats.medium_risk_count || 0;
+      if (document.getElementById('statPendingReviews')) document.getElementById('statPendingReviews').textContent = data.stats.pending_reviews_count || 0;
 
       // Render Risk Doughnut Chart
       renderRiskChart(data.risk_distribution);
+
+      // Render Priority Cases Table
+      renderPriorityCases(data.priority_cases);
 
       // Render Tables
       renderRecentAthletes(data.recent_athletes);
@@ -175,6 +180,59 @@ function renderRecentPredictions(preds) {
       </td>
     </tr>
   `).join('');
+}
+
+function renderPriorityCases(cases) {
+  const tbody = document.getElementById('priorityCasesTableBody');
+  const countBadge = document.getElementById('priorityCasesCountBadge');
+  if (!tbody) return;
+
+  if (!cases || cases.length === 0) {
+    if (countBadge) countBadge.textContent = '0 Cases';
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center py-4 text-muted fs-7">
+          <i class="fa-solid fa-circle-check text-success me-1"></i> No unresolved high or medium priority cases requiring review!
+        </td>
+      </tr>`;
+    return;
+  }
+
+  if (countBadge) countBadge.textContent = `${cases.length} Case${cases.length > 1 ? 's' : ''}`;
+
+  tbody.innerHTML = cases.map(c => `
+    <tr>
+      <td class="fw-bold text-dark">${escapeHtml(c.athlete_name)} <span class="fs-8 text-muted d-block">${escapeHtml(c.athlete_id)}</span></td>
+      <td><span class="badge bg-light text-dark border">${escapeHtml(c.primary_sport)}</span></td>
+      <td>${getBadgeHTML(c.risk_label)}</td>
+      <td class="fw-bold fs-7 ${c.risk_score > 65 ? 'text-danger' : 'text-warning'}">${c.risk_score !== null ? c.risk_score.toFixed(1) + '%' : 'N/A'}</td>
+      <td class="fs-7 text-muted">${c.record_date}</td>
+      <td>${getStatusBadgeHTML(c.review_status)}</td>
+      <td class="text-center">
+        <a href="/admin/predictions?record_id=${c.id}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold fs-8 shadow-sm">
+          <i class="fa-regular fa-pen-to-square me-1"></i> Review Case
+        </a>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function getStatusBadgeHTML(status) {
+  if (!status) status = 'Pending Review';
+  switch (status) {
+    case 'Pending Review':
+      return `<span class="badge bg-warning text-dark border border-warning-subtle fw-semibold px-2.5 py-1"><i class="fa-regular fa-clock me-1"></i> Pending Review</span>`;
+    case 'Under Review':
+      return `<span class="badge bg-info text-dark border border-info-subtle fw-semibold px-2.5 py-1"><i class="fa-solid fa-magnifying-glass me-1"></i> Under Review</span>`;
+    case 'Needs Attention':
+      return `<span class="badge bg-danger text-white fw-bold px-2.5 py-1"><i class="fa-solid fa-triangle-exclamation me-1"></i> Needs Attention</span>`;
+    case 'Monitoring':
+      return `<span class="badge bg-primary text-white fw-semibold px-2.5 py-1"><i class="fa-solid fa-eye me-1"></i> Monitoring</span>`;
+    case 'Resolved':
+      return `<span class="badge bg-success text-white fw-semibold px-2.5 py-1"><i class="fa-solid fa-circle-check me-1"></i> Resolved</span>`;
+    default:
+      return `<span class="badge bg-secondary text-white fw-semibold px-2.5 py-1">${escapeHtml(status)}</span>`;
+  }
 }
 
 function getBadgeHTML(label) {
