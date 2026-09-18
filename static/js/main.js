@@ -62,6 +62,25 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 
+// BFCache Navigation Protection: Force page reload if restored from browser memory cache (e.g. Back button)
+window.addEventListener('pageshow', function (event) {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
+function getCsrfToken() {
+  const metaElem = document.querySelector('meta[name="csrf-token"]');
+  if (metaElem) {
+    return metaElem.getAttribute('content');
+  }
+  const inputElem = document.querySelector('input[name="csrf_token"]');
+  if (inputElem) {
+    return inputElem.value;
+  }
+  return '';
+}
+
 function fetchAthleteNotifications() {
   fetch('/api/notifications')
     .then(res => res.json())
@@ -117,7 +136,10 @@ function fetchAthleteNotifications() {
 }
 
 function markNotificationRead(id) {
-  fetch(`/api/notifications/${id}/read`, { method: 'PUT' })
+  fetch(`/api/notifications/${id}/read`, {
+    method: 'PUT',
+    headers: { 'X-CSRFToken': getCsrfToken() }
+  })
     .then(res => res.json())
     .then(data => {
       if (data.status === 'success') fetchAthleteNotifications();
@@ -126,7 +148,10 @@ function markNotificationRead(id) {
 
 function markAllNotificationsRead(e) {
   if (e) e.preventDefault();
-  fetch('/api/notifications/read-all', { method: 'PUT' })
+  fetch('/api/notifications/read-all', {
+    method: 'PUT',
+    headers: { 'X-CSRFToken': getCsrfToken() }
+  })
     .then(res => res.json())
     .then(data => {
       if (data.status === 'success') fetchAthleteNotifications();

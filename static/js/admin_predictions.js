@@ -250,7 +250,10 @@ function submitCaseReviewUpdate() {
   // First update status
   fetch(`/api/admin/cases/${currentReviewRecordId}/status`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+    },
     body: JSON.stringify({ review_status: newStatus })
   })
     .then(res => res.json())
@@ -258,7 +261,10 @@ function submitCaseReviewUpdate() {
       // Next send notification
       return fetch('/api/admin/notifications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+        },
         body: JSON.stringify({
           athlete_id: currentReviewAthleteUserId,
           related_prediction_id: currentReviewRecordId,

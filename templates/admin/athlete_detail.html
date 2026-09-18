@@ -93,6 +93,8 @@
                 <span>•</span>
                 <span class="fw-bold text-white">{{ athlete.athlete_id }}</span>
                 <span>•</span>
+                <span>DOB: <strong>{{ athlete.date_of_birth.strftime('%d/%m/%Y') if athlete.date_of_birth else 'N/A' }}</strong></span>
+                <span>•</span>
                 <span>Age: <strong>{{ athlete.age }} yrs</strong></span>
                 <span>•</span>
                 <span>BMI: <strong>{{ athlete.bmi }}</strong></span>

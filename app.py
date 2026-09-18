@@ -1,9 +1,14 @@
 import os
 import time
 import base64
+import re
+import secrets
+import hmac
+import io
 from datetime import datetime
 from functools import wraps
 from urllib.parse import quote_plus
+from PIL import Image
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.utils import secure_filename
 from sqlalchemy import create_engine, inspect, text
@@ -18,11 +23,103 @@ from services.ml_service import ml_service
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "athleteguard_ai_secret_key_mca_2026")
 
+
+def validate_password_strength(password):
+    """Enforces 8+ chars, 1 uppercase, 1 lowercase, 1 digit, 1 special character."""
+    if not password or len(password) < 8:
+        return False, "Password must be at least 8 characters long."
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter (A-Z)."
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter (a-z)."
+    if not re.search(r'[0-9]', password):
+        return False, "Password must contain at least one number (0-9)."
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least one special character (e.g. !@#$%^&*)."
+    return True, ""
+
+
+def generate_csrf_token():
+    """Generates or retrieves unique session CSRF token."""
+    if 'csrf_token' not in session:
+        session['csrf_token'] = secrets.token_hex(32)
+    return session['csrf_token']
+
+
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf_token=generate_csrf_token)
+
+
+@app.before_request
+def csrf_protect():
+    """CSRF Token Verification Middleware for all state-changing HTTP requests."""
+    if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+        if request.endpoint == 'static':
+            return None
+
+        session_token = session.get('csrf_token')
+        if not session_token:
+            session_token = generate_csrf_token()
+
+        header_token = request.headers.get('X-CSRFToken')
+        form_token = request.form.get('csrf_token')
+        json_token = None
+        if request.is_json and isinstance(request.json, dict):
+            json_token = request.json.get('csrf_token')
+
+        request_token = header_token or form_token or json_token
+
+        if request.path in ['/login', '/register'] and not request_token:
+            return None
+
+        if not request_token or not hmac.compare_digest(str(request_token), str(session_token)):
+            if request.is_json or request.path.startswith('/api/'):
+                return jsonify({'status': 'error', 'message': 'CSRF token validation failed. Invalid or missing CSRF token.'}), 400
+            else:
+                flash("CSRF security verification failed. Please try again.", "danger")
+                return render_template('login.html', error_msg="CSRF security verification failed.")
+
+
+@app.after_request
+def add_security_headers(response):
+    """Enforces strict anti-caching HTTP headers on non-static responses to prevent BFCache dashboard leaks after logout."""
+    if request.endpoint != 'static':
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
 # Profile Upload Configuration
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads', 'profile_photos')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+def validate_image_file(file_bytes, filename):
+    """Validates binary image payload size, extension, MIME type, and Pillow stream integrity."""
+    if not file_bytes:
+        return False, "Empty file payload provided.", None
+
+    if len(file_bytes) > MAX_FILE_SIZE_BYTES:
+        return False, "Please upload a JPG, PNG, or WEBP image under 5 MB.", None
+
+    ext = filename.rsplit('.', 1)[1].lower() if filename and '.' in filename else 'jpg'
+    if ext not in ALLOWED_EXTENSIONS:
+        return False, "Please upload a JPG, PNG, or WEBP image under 5 MB.", None
+
+    try:
+        img = Image.open(io.BytesIO(file_bytes))
+        img.verify()
+        img_format = (img.format or '').lower()
+        if img_format not in ['jpeg', 'png', 'webp']:
+            return False, f"Invalid image MIME type ({img.format}). Allowed formats: JPEG, PNG, WEBP.", None
+    except Exception:
+        return False, "File content is corrupted or not a valid image file.", None
+
+    return True, "", ext
 
 # MySQL Configuration (Primary Active Database)
 DB_USER = os.environ.get("DB_USER", "root")
@@ -88,6 +185,11 @@ with app.app_context():
         if 'account_status' not in user_columns:
             db.session.execute(text("ALTER TABLE users ADD COLUMN account_status VARCHAR(20) NOT NULL DEFAULT 'active'"))
             db.session.commit()
+        if 'date_of_birth' not in user_columns:
+            db.session.execute(text("ALTER TABLE users ADD COLUMN date_of_birth DATE NULL"))
+            db.session.commit()
+            db.session.execute(text("UPDATE users SET date_of_birth = DATE_SUB(CURDATE(), INTERVAL IFNULL(age, 25) YEAR) WHERE date_of_birth IS NULL"))
+            db.session.commit()
 
         # Check daily_health_records table
         health_columns = [c['name'] for c in inspector.get_columns('daily_health_records')]
@@ -104,6 +206,50 @@ with app.app_context():
         print("[SCHEMA VERIFIED] Successfully verified MySQL database schema columns and tables.")
     except Exception as e:
         print(f"Database schema verification note: {e}")
+
+
+def calculate_age(dob_input):
+    """Calculates exact age in years from date_of_birth (date object or YYYY-MM-DD string)."""
+    if not dob_input:
+        return None
+    if isinstance(dob_input, str):
+        try:
+            dob_input = datetime.strptime(dob_input.strip(), '%Y-%m-%d').date()
+        except ValueError:
+            return None
+    today = datetime.utcnow().date()
+    calc = today.year - dob_input.year
+    if (today.month, today.day) < (dob_input.month, dob_input.day):
+        calc -= 1
+    return max(0, calc)
+
+
+def validate_dob_and_gender(dob_str, gender_str):
+    """
+    Authoritative server-side validator:
+    - Gender must strictly be either 'Male' or 'Female'.
+    - Date of Birth must be present, valid YYYY-MM-DD format, not in the future, and produce 1 <= Age <= 120.
+    """
+    if not gender_str or gender_str.strip() not in ['Male', 'Female']:
+        return False, "Gender must be selected as either Male or Female."
+
+    if not dob_str or not dob_str.strip():
+        return False, "Date of Birth is required."
+
+    try:
+        dob = datetime.strptime(dob_str.strip(), '%Y-%m-%d').date()
+    except ValueError:
+        return False, "Invalid Date of Birth format. Please select a valid date (YYYY-MM-DD)."
+
+    today = datetime.utcnow().date()
+    if dob > today:
+        return False, "Date of Birth cannot be in the future."
+
+    calc_age = calculate_age(dob)
+    if calc_age is None or calc_age < 1 or calc_age > 120:
+        return False, f"Date of Birth produces an invalid athlete age ({calc_age}). Age must be between 1 and 120 years."
+
+    return True, ""
 
 
 def allowed_file(filename):
@@ -202,20 +348,30 @@ def register():
 
     if request.method == 'POST':
         full_name = request.form.get('full_name', '').strip()
-        age = request.form.get('age', '').strip()
+        date_of_birth = request.form.get('date_of_birth', '').strip()
         gender = request.form.get('gender', '').strip()
         primary_sport = request.form.get('primary_sport', '').strip()
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
         confirm_password = request.form.get('confirm_password', '').strip()
 
-        if not all([full_name, age, gender, primary_sport, email, password]):
+        if not all([full_name, date_of_birth, gender, primary_sport, email, password]):
             flash("All fields are required for registration.", "danger")
-            return render_template('register.html')
+            return render_template('register.html', error_msg="All fields are required.")
+
+        is_valid_dg, dg_err = validate_dob_and_gender(date_of_birth, gender)
+        if not is_valid_dg:
+            flash(dg_err, "danger")
+            return render_template('register.html', error_msg=dg_err)
 
         if password != confirm_password:
             flash("Passwords do not match.", "danger")
-            return render_template('register.html')
+            return render_template('register.html', error_msg="Passwords do not match.")
+
+        is_strong, pwd_err = validate_password_strength(password)
+        if not is_strong:
+            flash(pwd_err, "danger")
+            return render_template('register.html', error_msg=pwd_err)
 
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
@@ -223,10 +379,14 @@ def register():
             return render_template('register.html', error_msg="Email already registered. Try logging in instead.")
 
         try:
+            dob_date = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+            calc_age = calculate_age(dob_date)
+
             # SECURITY: Hardcode role='athlete' on the backend regardless of client inputs
             new_user = User(
                 full_name=full_name,
-                age=int(age),
+                date_of_birth=dob_date,
+                _legacy_age=calc_age,
                 gender=gender,
                 primary_sport=primary_sport,
                 email=email,
@@ -948,10 +1108,14 @@ def mark_all_notifications_read():
 
 @app.route('/logout')
 def logout():
-    """Session logout handler."""
+    """Session logout handler with complete session clearing and anti-cache headers."""
     session.clear()
     flash("You have been signed out safely.", "info")
-    return redirect(url_for('login'))
+    response = app.make_response(redirect(url_for('login')))
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 
 @app.route('/dashboard')
@@ -1023,7 +1187,7 @@ def api_profile():
 
     full_name = data.get('full_name', '').strip()
     email = data.get('email', '').strip()
-    age = data.get('age')
+    date_of_birth = data.get('date_of_birth', '').strip() if data.get('date_of_birth') else None
     gender = data.get('gender', '').strip()
     phone = data.get('phone', '').strip()
     primary_sport = data.get('primary_sport', '').strip()
@@ -1039,14 +1203,15 @@ def api_profile():
     if not email or '@' not in email:
         return jsonify({'status': 'error', 'message': 'Please enter a valid email address.'}), 400
 
-    age_val = None
-    if age is not None and str(age).strip() != '':
-        try:
-            age_val = int(age)
-            if age_val <= 0 or age_val > 120:
-                return jsonify({'status': 'error', 'message': 'Age must be a valid positive number.'}), 400
-        except (ValueError, TypeError):
-            return jsonify({'status': 'error', 'message': 'Age must be a valid number.'}), 400
+    if gender and gender not in ['Male', 'Female']:
+        return jsonify({'status': 'error', 'message': 'Gender must be either Male or Female.'}), 400
+
+    dob_val = user.date_of_birth
+    if date_of_birth:
+        is_valid_dg, dg_err = validate_dob_and_gender(date_of_birth, gender or user.gender)
+        if not is_valid_dg:
+            return jsonify({'status': 'error', 'message': dg_err}), 400
+        dob_val = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
 
     height_val = None
     if height_cm is not None and str(height_cm).strip() != '':
@@ -1069,7 +1234,8 @@ def api_profile():
     try:
         user.full_name = full_name
         user.email = email
-        user.age = age_val
+        user.date_of_birth = dob_val
+        user._legacy_age = calculate_age(dob_val) if dob_val else user._legacy_age
         user.gender = gender if gender else user.gender
         user.phone = phone if phone else None
         user.primary_sport = primary_sport if primary_sport else user.primary_sport
@@ -1099,7 +1265,7 @@ def api_profile():
 @app.route('/api/profile/photo', methods=['POST'])
 @login_required
 def upload_profile_photo():
-    """API Endpoint for uploading and persisting athlete profile photo."""
+    """API Endpoint for uploading and persisting athlete profile photo with MIME/binary verification."""
     user = User.query.get(session.get('user_id'))
     if not user:
         return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
@@ -1112,15 +1278,12 @@ def upload_profile_photo():
         if file.filename == '':
             return jsonify({'status': 'error', 'message': 'No selected file.'}), 400
 
-        if not allowed_file(file.filename):
-            return jsonify({'status': 'error', 'message': 'Please upload a JPG, PNG, or WEBP image under 5 MB.'}), 400
-
-        ext = file.filename.rsplit('.', 1)[1].lower()
         file_bytes = file.read()
+        is_valid, err_msg, detected_ext = validate_image_file(file_bytes, file.filename)
+        if not is_valid:
+            return jsonify({'status': 'error', 'message': err_msg}), 400
 
-        if len(file_bytes) > MAX_FILE_SIZE_BYTES:
-            return jsonify({'status': 'error', 'message': 'Please upload a JPG, PNG, or WEBP image under 5 MB.'}), 400
-
+        ext = detected_ext
         filename_saved = f"ath_{user.id:04d}.{ext}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename_saved)
         
@@ -1129,25 +1292,28 @@ def upload_profile_photo():
 
     elif request.is_json and 'photo_base64' in request.json:
         base64_data = request.json['photo_base64']
+        inferred_ext = 'jpg'
         if ',' in base64_data:
             header, base64_data = base64_data.split(',', 1)
             if 'png' in header:
-                ext = 'png'
+                inferred_ext = 'png'
             elif 'webp' in header:
-                ext = 'webp'
+                inferred_ext = 'webp'
 
         try:
             image_bytes = base64.b64decode(base64_data)
-            if len(image_bytes) > MAX_FILE_SIZE_BYTES:
-                return jsonify({'status': 'error', 'message': 'Please upload a JPG, PNG, or WEBP image under 5 MB.'}), 400
+            is_valid, err_msg, detected_ext = validate_image_file(image_bytes, f"profile.{inferred_ext}")
+            if not is_valid:
+                return jsonify({'status': 'error', 'message': err_msg}), 400
 
+            ext = detected_ext
             filename_saved = f"ath_{user.id:04d}.{ext}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename_saved)
 
             with open(filepath, 'wb') as f:
                 f.write(image_bytes)
         except Exception as e:
-            return jsonify({'status': 'error', 'message': 'Invalid image format.'}), 400
+            return jsonify({'status': 'error', 'message': 'Invalid base64 image data.'}), 400
     else:
         return jsonify({'status': 'error', 'message': 'No image file provided.'}), 400
 

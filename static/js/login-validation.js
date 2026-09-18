@@ -14,15 +14,25 @@ document.addEventListener('DOMContentLoaded', function () {
     return re.test(String(email).toLowerCase());
   }
 
-  function setValid(input) {
-    input.classList.remove('is-invalid');
+  function setValid(input, errorId) {
+    if (input) input.classList.remove('is-invalid');
+    if (errorId) {
+      const errElem = document.getElementById(errorId);
+      if (errElem) {
+        errElem.style.display = 'none';
+        errElem.classList.remove('d-block');
+      }
+    }
   }
 
   function setInvalid(input, errorId, message) {
+    if (!input) return;
     input.classList.add('is-invalid');
     const errElem = document.getElementById(errorId);
-    if (errElem && message) {
-      errElem.textContent = message;
+    if (errElem) {
+      if (message) errElem.textContent = message;
+      errElem.style.display = 'block';
+      errElem.classList.add('d-block');
     }
   }
 

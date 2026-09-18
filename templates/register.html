@@ -67,6 +67,7 @@
 
       <!-- Registration Form -->
       <form id="registerForm" method="POST" action="{{ url_for('register') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <!-- Row 1: Full Name & Age -->
         <div class="row g-3">
@@ -87,21 +88,18 @@
           </div>
 
           <div class="col-sm-5 form-group">
-            <label for="regAge" class="form-label">Age</label>
+            <label for="regDOB" class="form-label">Date of Birth</label>
             <div class="input-icon-wrapper">
               <i class="fa-regular fa-calendar input-icon"></i>
               <input 
-                type="number" 
+                type="date" 
                 class="form-control" 
-                id="regAge" 
-                name="age" 
-                placeholder="25" 
-                min="10" 
-                max="100" 
+                id="regDOB" 
+                name="date_of_birth" 
                 required
               >
             </div>
-            <div class="invalid-feedback" id="ageError">Enter valid age.</div>
+            <div class="invalid-feedback" id="dobError">Select a valid Date of Birth.</div>
           </div>
         </div>
 
@@ -115,11 +113,9 @@
                 <option value="" selected disabled>Select Gender</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
-                <option value="Other">Other</option>
-                <option value="Prefer not to say">Prefer not to say</option>
               </select>
             </div>
-            <div class="invalid-feedback" id="genderError">Select gender.</div>
+            <div class="invalid-feedback" id="genderError">Please select Male or Female.</div>
           </div>
 
           <div class="col-sm-6 form-group">

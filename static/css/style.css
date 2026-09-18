@@ -858,14 +858,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   font-size: 0.775rem;
   color: #ef4444;
   margin-top: 0.25rem;
+  font-weight: 500;
 }
 
 .is-invalid {
   border-color: #ef4444 !important;
 }
 
-.is-invalid ~ .invalid-feedback {
-  display: block;
+.is-invalid ~ .invalid-feedback,
+.form-group:has(.is-invalid) > .invalid-feedback,
+.input-icon-wrapper:has(.is-invalid) + .invalid-feedback,
+.invalid-feedback.d-block {
+  display: block !important;
 }
 
 .alert-custom {

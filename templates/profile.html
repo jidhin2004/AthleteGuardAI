@@ -240,8 +240,15 @@
 
               <div class="col-sm-6">
                 <div class="profile-detail-box">
-                  <div class="profile-detail-label">Age</div>
-                  <div class="profile-detail-value" id="viewAge">{{ user.age ~ ' years' if user.age else 'Not provided' }}</div>
+                  <div class="profile-detail-label">Date of Birth</div>
+                  <div class="profile-detail-value" id="viewDOB">{{ user.date_of_birth.strftime('%d/%m/%Y') if user.date_of_birth else 'Not provided' }}</div>
+                </div>
+              </div>
+
+              <div class="col-sm-6">
+                <div class="profile-detail-box">
+                  <div class="profile-detail-label">Calculated Age</div>
+                  <div class="profile-detail-value" id="viewAge">{{ user.age ~ ' yrs' if user.age else 'N/A' }}</div>
                 </div>
               </div>
 
@@ -435,9 +442,9 @@
             </div>
 
             <div class="col-md-3 form-group">
-              <label for="editAge" class="form-label">Age</label>
-              <input type="number" class="form-control" id="editAge" value="{{ user.age }}" min="10" max="120" required>
-              <div class="invalid-feedback" id="ageError">Enter valid age.</div>
+              <label for="editDOB" class="form-label">Date of Birth</label>
+              <input type="date" class="form-control" id="editDOB" value="{{ user.date_of_birth.strftime('%Y-%m-%d') if user.date_of_birth else '' }}" required>
+              <div class="invalid-feedback" id="dobError">Select valid Date of Birth.</div>
             </div>
 
             <div class="col-md-3 form-group">
@@ -445,8 +452,6 @@
               <select class="form-select" id="editGender" required>
                 <option value="Male" {% if user.gender == 'Male' %}selected{% endif %}>Male</option>
                 <option value="Female" {% if user.gender == 'Female' %}selected{% endif %}>Female</option>
-                <option value="Other" {% if user.gender == 'Other' %}selected{% endif %}>Other</option>
-                <option value="Prefer not to say" {% if user.gender == 'Prefer not to say' %}selected{% endif %}>Prefer not to say</option>
               </select>
             </div>
 

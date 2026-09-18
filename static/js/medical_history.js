@@ -502,7 +502,10 @@ async function handleRecordSubmit(e, endpoint, idElemId, btnId, modalId) {
   try {
     const response = await fetch(url, {
       method: method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+      },
       body: JSON.stringify(payload)
     });
 
@@ -557,7 +560,10 @@ async function handleRecordDelete() {
 
   try {
     const response = await fetch(`/api/${category}/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+      }
     });
 
     const resData = await response.json();

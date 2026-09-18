@@ -238,7 +238,10 @@ async function handleFormSubmit(e) {
   try {
     const response = await fetch('/api/predictions/predict', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+      },
       body: JSON.stringify(payload)
     });
 

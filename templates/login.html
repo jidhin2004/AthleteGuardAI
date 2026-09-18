@@ -87,6 +87,7 @@
 
       <!-- Login Form -->
       <form id="loginForm" method="POST" action="{{ url_for('login') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
         <!-- Athlete ID or Email -->
         <div class="form-group">

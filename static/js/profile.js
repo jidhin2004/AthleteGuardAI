@@ -136,6 +136,9 @@ async function handlePhotoUploadSubmit() {
 
     const response = await fetch('/api/profile/photo', {
       method: 'POST',
+      headers: {
+        'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+      },
       body: formData
     });
 
@@ -255,7 +258,7 @@ async function handleProfileSave(e) {
   if (errorAlert) errorAlert.style.display = 'none';
 
   const fullName = document.getElementById('editFullName').value.trim();
-  const ageRaw = document.getElementById('editAge').value.trim();
+  const dobRaw = document.getElementById('editDOB').value.trim();
   const email = document.getElementById('editEmail').value.trim();
   const heightRaw = document.getElementById('editHeight').value.trim();
   const weightRaw = document.getElementById('editWeight').value.trim();
@@ -270,12 +273,28 @@ async function handleProfileSave(e) {
     markValid('editFullName', 'fullNameError');
   }
 
-  const age = parseInt(ageRaw);
-  if (!ageRaw || isNaN(age) || age <= 0 || age > 120) {
-    markInvalid('editAge', 'ageError', 'Enter a valid positive age.');
+  if (!dobRaw) {
+    markInvalid('editDOB', 'dobError', 'Date of Birth is required.');
     isValid = false;
   } else {
-    markValid('editAge', 'ageError');
+    const parts = dobRaw.split('-');
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (isNaN(d.getTime()) || d > today) {
+      markInvalid('editDOB', 'dobError', 'Date of Birth cannot be in the future.');
+      isValid = false;
+    } else {
+      let ageCalc = today.getFullYear() - d.getFullYear();
+      const m = today.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < d.getDate())) ageCalc--;
+      if (ageCalc < 1 || ageCalc > 120) {
+        markInvalid('editDOB', 'dobError', `DOB produces invalid age (${ageCalc}).`);
+        isValid = false;
+      } else {
+        markValid('editDOB', 'dobError');
+      }
+    }
   }
 
   if (!email || !email.includes('@')) {
@@ -317,7 +336,7 @@ async function handleProfileSave(e) {
 
   const payload = {
     full_name: fullName,
-    age: age,
+    date_of_birth: dobRaw,
     gender: document.getElementById('editGender').value,
     email: email,
     phone: phone,
@@ -337,7 +356,8 @@ async function handleProfileSave(e) {
     const response = await fetch('/api/profile', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
       },
       body: JSON.stringify(payload)
     });
@@ -383,13 +403,15 @@ function updateProfileViewUI(u) {
   if (summaryEmail) summaryEmail.textContent = u.email;
 
   const nameVal = document.getElementById('viewFullName');
+  const dobVal = document.getElementById('viewDOB');
   const ageVal = document.getElementById('viewAge');
   const genderVal = document.getElementById('viewGender');
   const emailVal = document.getElementById('viewEmail');
   const phoneVal = document.getElementById('viewPhone');
 
   if (nameVal) nameVal.textContent = u.full_name;
-  if (ageVal) ageVal.textContent = u.age ? `${u.age} years` : 'Not provided';
+  if (dobVal) dobVal.textContent = u.date_of_birth_formatted || u.date_of_birth || 'Not provided';
+  if (ageVal) ageVal.textContent = u.age ? `${u.age} yrs` : 'N/A';
   if (genderVal) genderVal.textContent = u.gender || 'Not provided';
   if (emailVal) emailVal.textContent = u.email;
   if (phoneVal) phoneVal.textContent = u.phone || 'Not provided';

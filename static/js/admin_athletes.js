@@ -213,7 +213,12 @@ function executeStatusChange() {
   btnConfirm.disabled = true;
   btnConfirm.textContent = 'Processing...';
 
-  fetch(endpoint, { method: 'POST' })
+  fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+    }
+  })
     .then(res => res.json())
     .then(data => {
       btnConfirm.disabled = false;
