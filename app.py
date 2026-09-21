@@ -5,7 +5,7 @@ import re
 import secrets
 import hmac
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from urllib.parse import quote_plus
 from PIL import Image
@@ -285,6 +285,24 @@ def admin_required(f):
     return decorated_function
 
 
+def coach_required(f):
+    """Decorator to restrict access strictly to authenticated Coach users."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("Please sign in with Coach credentials to access the Coach Dashboard.", "warning")
+            return redirect(url_for('login'))
+
+        user_id = session.get('user_id')
+        user = User.query.get(user_id)
+        if not user or user.role != 'coach':
+            flash("Access denied. Coach privileges are required to view this page.", "danger")
+            return redirect(url_for('dashboard'))
+
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 @app.route('/')
 def index():
     """Public Landing Page route."""
@@ -298,6 +316,8 @@ def login():
         user_role = session.get('user_role')
         if user_role == 'admin':
             return redirect(url_for('admin_dashboard'))
+        elif user_role == 'coach':
+            return redirect(url_for('coach_dashboard'))
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -316,8 +336,10 @@ def login():
 
         if user and user.check_password(password):
             if (user.account_status or 'active').lower() == 'inactive':
-                flash("Your athlete account has been deactivated by the administrator. Please contact support.", "danger")
-                return render_template('login.html', error_msg="Your athlete account has been deactivated by the administrator. Please contact support.")
+                role_label = user.role.capitalize() if user.role else 'Athlete'
+                msg = f"Your {role_label} account has been deactivated by the administrator. Please contact support."
+                flash(msg, "danger")
+                return render_template('login.html', error_msg=msg)
 
             session.permanent = True if remember else False
             session['user_id'] = user.id
@@ -329,6 +351,8 @@ def login():
             flash(f"Welcome back, {user.full_name}!", "success")
             if user.role == 'admin':
                 return redirect(url_for('admin_dashboard'))
+            elif user.role == 'coach':
+                return redirect(url_for('coach_dashboard'))
             return redirect(url_for('dashboard'))
         else:
             flash("Invalid Athlete ID/Email or password. Please try again.", "danger")
@@ -344,6 +368,8 @@ def register():
         user_role = session.get('user_role')
         if user_role == 'admin':
             return redirect(url_for('admin_dashboard'))
+        elif user_role == 'coach':
+            return redirect(url_for('coach_dashboard'))
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -412,6 +438,75 @@ def register():
             return render_template('register.html')
 
     return render_template('register.html')
+
+
+# ==========================================
+# COACH DASHBOARD ROUTE & MANAGEMENT APIs
+# ==========================================
+
+@app.route('/coach/dashboard')
+@coach_required
+def coach_dashboard():
+    """Coach Dashboard Landing Page - Protected Route for Coach Users."""
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+    return render_template('coach/dashboard.html', user=user)
+
+
+@app.route('/api/admin/create-coach', methods=['POST'])
+@admin_required
+def admin_create_coach():
+    """API Endpoint for Admins to create or upgrade Coach accounts securely."""
+    data = request.get_json() if request.is_json else request.form
+    full_name = (data.get('full_name') or '').strip()
+    email = (data.get('email') or '').strip()
+    password = (data.get('password') or '').strip()
+    primary_sport = (data.get('primary_sport') or 'General Sports').strip()
+
+    if not full_name or not email or not password:
+        return jsonify({'status': 'error', 'message': 'Full name, email, and password are required.'}), 400
+
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        existing_user.role = 'coach'
+        existing_user.full_name = full_name
+        existing_user.primary_sport = primary_sport or existing_user.primary_sport
+        existing_user.set_password(password)
+        existing_user.account_status = 'active'
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': f"Account for '{full_name}' upgraded to Coach successfully.",
+            'user': existing_user.to_dict()
+        })
+
+    is_strong, pwd_err = validate_password_strength(password)
+    if not is_strong:
+        return jsonify({'status': 'error', 'message': pwd_err}), 400
+
+    try:
+        new_coach = User(
+            full_name=full_name,
+            _legacy_age=35,
+            gender='Other',
+            primary_sport=primary_sport or 'General Sports',
+            email=email,
+            role='coach',
+            account_status='active'
+        )
+        new_coach.set_password(password)
+        db.session.add(new_coach)
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': f"Coach account for '{full_name}' created successfully.",
+            'user': new_coach.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': f'Database error: {str(e)}'}), 500
 
 
 # ==========================================
@@ -1839,6 +1934,106 @@ def monthly_summary():
     """Monthly Summary Page."""
     user = User.query.get(session.get('user_id'))
     return render_template('monthly_summary.html', user=user)
+
+
+def calculate_period_summary(user_id, days_count, period_label):
+    """
+    Helper function to calculate period health averages, prediction counts,
+    risk distributions, and trend data for the authenticated athlete.
+    """
+    today = datetime.utcnow().date()
+    start_date = today - timedelta(days=days_count - 1)
+    start_date_str = start_date.strftime('%Y-%m-%d')
+    end_date_str = today.strftime('%Y-%m-%d')
+
+    # Query records within date range strictly for current athlete
+    records = DailyHealthRecord.query.filter(
+        DailyHealthRecord.user_id == user_id,
+        DailyHealthRecord.record_date >= start_date_str,
+        DailyHealthRecord.record_date <= end_date_str
+    ).order_by(DailyHealthRecord.record_date.asc(), DailyHealthRecord.id.asc()).all()
+
+    # Fallback to latest records if date range has no records but user has historical entries
+    if not records:
+        all_records = DailyHealthRecord.query.filter_by(user_id=user_id).order_by(
+            DailyHealthRecord.record_date.desc(), DailyHealthRecord.id.desc()
+        ).limit(days_count).all()
+        if all_records:
+            records = list(reversed(all_records))
+
+    if not records:
+        return {
+            'status': 'success',
+            'has_data': False,
+            'period': period_label,
+            'days_count': days_count,
+            'message': f'No health data available for the selected {period_label} period.'
+        }
+
+    total_records = len(records)
+    avg_sleep = round(sum(r.sleep_hours for r in records) / total_records, 1)
+    avg_training = round(sum(r.training_hours for r in records) / total_records, 1)
+    avg_rhr = round(sum(r.resting_heart_rate for r in records) / total_records, 1)
+    avg_fatigue = round(sum(r.fatigue_level for r in records) / total_records, 1)
+    avg_stress = round(sum(r.stress_level for r in records) / total_records, 1)
+
+    pred_records = [r for r in records if r.risk_score is not None]
+    prediction_count = len(pred_records)
+    avg_risk_score = round(sum(r.risk_score for r in pred_records) / prediction_count, 1) if prediction_count > 0 else 0.0
+
+    low_cnt = sum(1 for r in pred_records if (r.risk_label or '').lower() == 'low risk')
+    med_cnt = sum(1 for r in pred_records if (r.risk_label or '').lower() == 'medium risk')
+    high_cnt = sum(1 for r in pred_records if (r.risk_label or '').lower() == 'high risk')
+
+    trend = []
+    for r in records:
+        if r.risk_score is not None:
+            trend.append({
+                'date': r.record_date,
+                'risk_score': round(float(r.risk_score), 1),
+                'risk_label': r.risk_label or 'Low Risk'
+            })
+
+    return {
+        'status': 'success',
+        'has_data': True,
+        'period': period_label,
+        'days_count': days_count,
+        'total_records': total_records,
+        'prediction_count': prediction_count,
+        'averages': {
+            'sleep_hours': avg_sleep,
+            'training_hours': avg_training,
+            'resting_heart_rate': avg_rhr,
+            'fatigue_level': avg_fatigue,
+            'stress_level': avg_stress,
+            'risk_score': avg_risk_score
+        },
+        'risk_distribution': {
+            'low': low_cnt,
+            'medium': med_cnt,
+            'high': high_cnt
+        },
+        'trend': trend
+    }
+
+
+@app.route('/api/weekly-summary')
+@login_required
+def get_weekly_summary_api():
+    """REST API returning 7-day health summary and risk trends for authenticated athlete."""
+    user_id = session.get('user_id')
+    data = calculate_period_summary(user_id, days_count=7, period_label='weekly')
+    return jsonify(data)
+
+
+@app.route('/api/monthly-summary')
+@login_required
+def get_monthly_summary_api():
+    """REST API returning 30-day health summary and risk trends for authenticated athlete."""
+    user_id = session.get('user_id')
+    data = calculate_period_summary(user_id, days_count=30, period_label='monthly')
+    return jsonify(data)
 
 
 @app.route('/api/dashboard-data')

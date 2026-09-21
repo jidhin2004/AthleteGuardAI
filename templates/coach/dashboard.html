@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Coach Dashboard - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <!-- Coach Sidebar Navigation -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('coach_dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm"><i class="fa-solid fa-shield-halved"></i></div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge">AI POWERED</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('coach_dashboard') }}" class="nav-item-link active"><i class="fa-solid fa-users-gear"></i><span>Dashboard</span></a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle bg-primary text-white">{{ user.full_name[0] | upper }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge bg-primary text-white fw-bold">COACH</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <!-- Top App Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-nav-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+        <h1 class="header-title">Coach Dashboard</h1>
+      </div>
+      <div class="header-right">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 fw-semibold me-2">
+          <i class="fa-solid fa-user-shield me-1"></i> Head Coach
+        </span>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="dashboard-content">
+
+      <!-- Main Coach Header Card -->
+      <div class="card-master mb-4">
+        <div class="card-header-master border-0 pb-0">
+          <div>
+            <h3 class="card-title-master"><i class="fa-solid fa-clipboard-user me-2 text-primary"></i> Coach Dashboard</h3>
+            <p class="text-muted fs-7 mb-0">Welcome to your AthleteGuard AI Coaching Portal, {{ user.full_name }}.</p>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="badge bg-primary fs-7 px-3 py-2 rounded-pill">Role: Coach</span>
+            <span class="badge bg-info text-dark fs-7 px-3 py-2 rounded-pill">Sport: {{ user.primary_sport }}</span>
+          </div>
+        </div>
+
+        <div class="p-4 mt-2 bg-light rounded-3 border">
+          <div class="d-flex align-items-center mb-3">
+            <div class="brand-icon-sm bg-primary text-white me-3 fs-4" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+              <i class="fa-solid fa-people-group"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold text-dark mb-1">Team management features will be available here.</h5>
+              <p class="text-muted mb-0">Your Coach account has been authenticated successfully and assigned to the <strong>{{ user.primary_sport }}</strong> discipline.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Coach Features Overview Cards -->
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card-master h-100 p-4">
+            <div class="text-primary mb-3 fs-3"><i class="fa-solid fa-users-viewfinder"></i></div>
+            <h5 class="fw-bold text-dark mb-2">Squad Roster Monitoring</h5>
+            <p class="text-muted fs-7 mb-0">Track daily health metrics, sleep recovery, and workload logs across your assigned team members.</p>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card-master h-100 p-4">
+            <div class="text-warning mb-3 fs-3"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h5 class="fw-bold text-dark mb-2">Team Risk Analytics</h5>
+            <p class="text-muted fs-7 mb-0">Access Random Forest injury risk distributions and receive automated alerts for high-risk athletes.</p>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card-master h-100 p-4">
+            <div class="text-success mb-3 fs-3"><i class="fa-solid fa-chart-simple"></i></div>
+            <h5 class="fw-bold text-dark mb-2">Team Summary Reports</h5>
+            <p class="text-muted fs-7 mb-0">Analyze 7-day and 30-day aggregated performance trends to optimize squad training schedules.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+</div>
+{% endblock %}
