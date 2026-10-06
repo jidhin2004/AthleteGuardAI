@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}My Team - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <!-- Sidebar Navigation -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm"><i class="fa-solid fa-shield-halved"></i></div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge">AI POWERED</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item-link"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('profile') }}" class="nav-item-link"><i class="fa-regular fa-user"></i><span>Profile</span></a>
+        <a href="{{ url_for('medical_history') }}" class="nav-item-link"><i class="fa-solid fa-notes-medical"></i><span>Medical History</span></a>
+        <a href="{{ url_for('daily_monitoring') }}" class="nav-item-link"><i class="fa-solid fa-calendar-check"></i><span>Daily Health Monitoring</span></a>
+        <a href="{{ url_for('prediction_history') }}" class="nav-item-link"><i class="fa-solid fa-clock-rotate-left"></i><span>Prediction History</span></a>
+        <a href="{{ url_for('weekly_summary') }}" class="nav-item-link"><i class="fa-solid fa-calendar-week"></i><span>Weekly Summary</span></a>
+        <a href="{{ url_for('monthly_summary') }}" class="nav-item-link"><i class="fa-solid fa-calendar-days"></i><span>Monthly Summary</span></a>
+        <a href="{{ url_for('join_team_page') }}" class="nav-item-link"><i class="fa-solid fa-right-to-bracket"></i><span>Join Team</span></a>
+        <a href="{{ url_for('my_team_page') }}" class="nav-item-link active"><i class="fa-solid fa-people-group"></i><span>My Team</span></a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle">{{ user.full_name[0] | upper }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge">{{ user.primary_sport }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <!-- Top App Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-nav-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+        <h1 class="header-title">My Team</h1>
+      </div>
+      <div class="header-right">
+        <a href="{{ url_for('join_team_page') }}" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm">
+          <i class="fa-solid fa-plus-circle me-1"></i> Join Another Team
+        </a>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="dashboard-content">
+
+      <!-- Alert Banner -->
+      <div id="myTeamAlert" class="alert alert-dismissible fade show d-none" role="alert">
+        <span id="myTeamAlertMsg"></span>
+        <button type="button" class="btn-close" onclick="this.parentElement.classList.add('d-none')"></button>
+      </div>
+
+      <!-- Loading State -->
+      <div id="myTeamLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading team...</span></div>
+        <p class="text-muted mt-2">Retrieving your team membership...</p>
+      </div>
+
+      <!-- Empty State: Not in any team -->
+      <div id="noMyTeamState" class="text-center py-5 bg-white rounded-3 border shadow-sm d-none">
+        <div class="brand-icon-sm bg-primary-subtle text-primary mx-auto mb-3" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 1.5rem;">
+          <i class="fa-solid fa-user-group"></i>
+        </div>
+        <h3 class="fw-bold text-dark mb-2">You are not a member of any team yet.</h3>
+        <p class="text-muted fs-7 mb-4">Ask your coach for a Team Code (e.g. <code>FB-7K29Q</code>) and enter it to join your squad.</p>
+        <a href="{{ url_for('join_team_page') }}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">
+          <i class="fa-solid fa-right-to-bracket me-2"></i> Join a Team Now
+        </a>
+      </div>
+
+      <!-- My Team Cards Container -->
+      <div id="myTeamContainer" class="row g-4 d-none">
+        <!-- Injected by my_team.js -->
+      </div>
+
+    </main>
+  </div>
+
+</div>
+
+<!-- Leave Team Modal Confirmation -->
+<div class="modal fade" id="leaveTeamModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-warning text-dark rounded-top-4">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-right-from-bracket me-2"></i> Leave Team Confirmation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <i class="fa-solid fa-circle-exclamation text-warning fs-1 mb-3"></i>
+        <h5 class="fw-bold text-dark mb-2">Are you sure you want to leave <span id="leaveTeamName" class="text-primary">this team</span>?</h5>
+        <p class="text-muted fs-7 mb-0">You will no longer be listed in the coach's roster. Your personal health monitoring logs, medical history, and prediction records will remain completely safe.</p>
+      </div>
+      <div class="modal-footer bg-light rounded-bottom-4 px-4 py-3 justify-content-center">
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning rounded-pill px-4 fw-bold text-dark" id="btnConfirmLeaveTeam">
+          <i class="fa-solid fa-check-circle me-1"></i> Yes, Leave Team
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/my_team.js"></script>
+{% endblock %}

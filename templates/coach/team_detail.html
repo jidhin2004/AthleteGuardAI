@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ team.team_name }} - Team Detail | AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <!-- Coach Sidebar Navigation -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('coach_dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm"><i class="fa-solid fa-shield-halved"></i></div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge">AI POWERED</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('coach_dashboard') }}" class="nav-item-link"><i class="fa-solid fa-users-gear"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('coach_teams_page') }}" class="nav-item-link active"><i class="fa-solid fa-people-group"></i><span>My Teams</span></a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle bg-primary text-white">{{ user.full_name[0] | upper }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge bg-primary text-white fw-bold">COACH</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <!-- Top App Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <a href="{{ url_for('coach_teams_page') }}" class="btn btn-outline-secondary btn-sm rounded-circle me-2" title="Back to Teams"><i class="fa-solid fa-arrow-left"></i></a>
+        <h1 class="header-title">{{ team.team_name }}</h1>
+      </div>
+      <div class="header-right">
+        <span class="badge bg-primary fs-7 rounded-pill px-3 py-2"><i class="fa-solid fa-key me-1"></i> {{ team.team_code }}</span>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="dashboard-content">
+
+      <!-- Alert Banner -->
+      <div id="teamDetailAlert" class="alert alert-dismissible fade show d-none" role="alert">
+        <span id="teamDetailAlertMsg"></span>
+        <button type="button" class="btn-close" onclick="this.parentElement.classList.add('d-none')"></button>
+      </div>
+
+      <!-- Team Overview Header Card -->
+      <div class="card-master mb-4">
+        <div class="row align-items-center g-3">
+          <div class="col-md-8">
+            <div class="d-flex align-items-center gap-3">
+              <div class="brand-icon-sm bg-primary text-white fs-3" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 14px;">
+                <i class="fa-solid fa-people-group"></i>
+              </div>
+              <div>
+                <h3 class="fw-bold text-dark mb-1">{{ team.team_name }}</h3>
+                <div class="d-flex align-items-center gap-2 text-muted fs-7">
+                  <span class="badge bg-info text-dark rounded-pill fw-semibold">{{ team.sport }}</span>
+                  <span>•</span>
+                  <span>Created: {{ team.created_at.strftime('%b %d, %Y') }}</span>
+                  <span>•</span>
+                  <span class="text-success fw-bold">Active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <div class="p-3 bg-light rounded-3 border d-inline-block text-center">
+              <span class="text-muted fs-8 text-uppercase d-block fw-semibold mb-1">TEAM JOIN CODE</span>
+              <div class="d-flex align-items-center gap-2 justify-content-center">
+                <code class="fs-4 fw-bold text-primary" id="teamCodeDisplay">{{ team.team_code }}</code>
+                <button class="btn btn-sm btn-outline-secondary rounded-circle" onclick="copyTeamCode('{{ team.team_code }}')" title="Copy Code">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Members Table Section -->
+      <div class="card-master">
+        <div class="card-header-master border-0 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <div>
+            <h4 class="card-title-master"><i class="fa-solid fa-users me-2 text-primary"></i> Team Members Roster</h4>
+            <p class="text-muted fs-7 mb-0">Athletes currently registered under {{ team.team_name }}.</p>
+          </div>
+          <div>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 fw-bold" id="memberCountBadge">
+              Members: Loading...
+            </span>
+          </div>
+        </div>
+
+        <div id="membersLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading roster...</span></div>
+          <p class="text-muted mt-2">Loading squad members...</p>
+        </div>
+
+        <div id="noMembersState" class="text-center py-5 bg-light rounded-3 border d-none">
+          <i class="fa-solid fa-user-slash fs-2 text-muted mb-2"></i>
+          <h5 class="fw-bold text-dark">No athletes have joined this team yet.</h5>
+          <p class="text-muted fs-7 mb-0">Share team code <code class="fw-bold">{{ team.team_code }}</code> with your athletes so they can join via their dashboard.</p>
+        </div>
+
+        <div id="membersTableWrapper" class="table-responsive d-none">
+          <table class="table table-hover align-middle custom-table">
+            <thead class="table-light">
+              <tr>
+                <th>Athlete Name</th>
+                <th>Athlete ID</th>
+                <th>Email Address</th>
+                <th>Sport</th>
+                <th>Joined Date</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="membersTbody">
+              <!-- Injected by coach_team_detail.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+</div>
+
+<!-- Remove Member Modal Confirmation -->
+<div class="modal fade" id="removeMemberModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-danger text-white rounded-top-4">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-minus me-2"></i> Remove Athlete From Team</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <i class="fa-solid fa-triangle-exclamation text-danger fs-1 mb-3"></i>
+        <h5 class="fw-bold text-dark mb-2">Are you sure you want to remove <span id="removeAthleteName" class="text-danger">this athlete</span>?</h5>
+        <p class="text-muted fs-7 mb-0">This will remove their membership from <strong>{{ team.team_name }}</strong>. Their AthleteGuard personal account, medical history, and health logs will remain intact.</p>
+      </div>
+      <div class="modal-footer bg-light rounded-bottom-4 px-4 py-3 justify-content-center">
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger rounded-pill px-4 fw-bold" id="btnConfirmRemoveMember">
+          <i class="fa-solid fa-user-xmark me-1"></i> Yes, Remove Athlete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CURRENT_TEAM_ID = {{ team.id }};
+</script>
+<script src="/static/js/coach_team_detail.js"></script>
+{% endblock %}

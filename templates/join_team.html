@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Join a Team - AthleteGuard AI{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+  
+  <!-- Sidebar Navigation -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div>
+      <div class="sidebar-header">
+        <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
+          <div class="brand-icon-sm"><i class="fa-solid fa-shield-halved"></i></div>
+          <div>
+            <div class="brand-title">AthleteGuard AI</div>
+            <span class="ai-badge">AI POWERED</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item-link"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('profile') }}" class="nav-item-link"><i class="fa-regular fa-user"></i><span>Profile</span></a>
+        <a href="{{ url_for('medical_history') }}" class="nav-item-link"><i class="fa-solid fa-notes-medical"></i><span>Medical History</span></a>
+        <a href="{{ url_for('daily_monitoring') }}" class="nav-item-link"><i class="fa-solid fa-calendar-check"></i><span>Daily Health Monitoring</span></a>
+        <a href="{{ url_for('prediction_history') }}" class="nav-item-link"><i class="fa-solid fa-clock-rotate-left"></i><span>Prediction History</span></a>
+        <a href="{{ url_for('weekly_summary') }}" class="nav-item-link"><i class="fa-solid fa-calendar-week"></i><span>Weekly Summary</span></a>
+        <a href="{{ url_for('monthly_summary') }}" class="nav-item-link"><i class="fa-solid fa-calendar-days"></i><span>Monthly Summary</span></a>
+        <a href="{{ url_for('join_team_page') }}" class="nav-item-link active"><i class="fa-solid fa-right-to-bracket"></i><span>Join Team</span></a>
+        <a href="{{ url_for('my_team_page') }}" class="nav-item-link"><i class="fa-solid fa-people-group"></i><span>My Team</span></a>
+      </nav>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile-widget">
+        <div class="avatar-circle">{{ user.full_name[0] | upper }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ user.full_name }}</div>
+          <span class="user-sport-badge">{{ user.primary_sport }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn-link" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <!-- Top App Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <button class="mobile-nav-toggle" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
+        <h1 class="header-title">Join a Team</h1>
+      </div>
+      <div class="header-right">
+        <a href="{{ url_for('my_team_page') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold">
+          <i class="fa-solid fa-people-group me-1"></i> View My Team
+        </a>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
+          <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="dashboard-content">
+
+      <!-- Alert Banner -->
+      <div id="joinTeamAlert" class="alert alert-dismissible fade show d-none" role="alert">
+        <span id="joinTeamAlertMsg"></span>
+        <button type="button" class="btn-close" onclick="this.parentElement.classList.add('d-none')"></button>
+      </div>
+
+      <!-- Join Team Form Card -->
+      <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+          <div class="card-master p-4 shadow-sm rounded-4">
+            <div class="text-center mb-4">
+              <div class="brand-icon-sm bg-primary text-white mx-auto mb-3" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 1.5rem;">
+                <i class="fa-solid fa-right-to-bracket"></i>
+              </div>
+              <h3 class="fw-bold text-dark mb-1">Enter Team Code</h3>
+              <p class="text-muted fs-7">Ask your coach for your unique 5-character Team Code (e.g. <code>FB-7K29Q</code>) to join your squad.</p>
+            </div>
+
+            <form id="joinTeamForm" onsubmit="handleJoinTeam(event)">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+              <div class="mb-4">
+                <label for="team_code" class="form-label fw-bold text-dark">Team Code <span class="text-danger">*</span></label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-key"></i></span>
+                  <input type="text" class="form-control text-uppercase fw-bold letter-spacing-1" id="team_code" name="team_code" placeholder="e.g. FB-7K29Q" required style="letter-spacing: 2px;">
+                </div>
+                <small class="text-muted mt-1 d-block">Codes are case-insensitive and generated directly by your coach.</small>
+              </div>
+
+              <div class="d-grid mb-3">
+                <button type="submit" class="btn btn-primary btn-lg rounded-3 fw-bold" id="btnSubmitJoin">
+                  <i class="fa-solid fa-user-plus me-2"></i> Join Team
+                </button>
+              </div>
+            </form>
+
+            <div class="p-3 bg-light rounded-3 text-center border mt-3">
+              <span class="text-muted fs-7"><i class="fa-solid fa-circle-info text-info me-1"></i> Already in a team? <a href="{{ url_for('my_team_page') }}" class="fw-bold text-primary text-decoration-none">View your active team membership →</a></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+</div>
+
+<script src="/static/js/join_team.js"></script>
+{% endblock %}

@@ -18,6 +18,7 @@ from models.medical import Injury, MedicalCondition, Allergy, Medication, Surger
 from models.health import DailyHealthRecord
 from models.admin_note import AdminNote
 from models.notification import Notification
+from models.team import Team, TeamMember
 from services.ml_service import ml_service
 
 app = Flask(__name__)
@@ -78,7 +79,7 @@ def csrf_protect():
                 return jsonify({'status': 'error', 'message': 'CSRF token validation failed. Invalid or missing CSRF token.'}), 400
             else:
                 flash("CSRF security verification failed. Please try again.", "danger")
-                return render_template('login.html', error_msg="CSRF security verification failed.")
+                return render_template('login.html')
 
 
 @app.after_request
@@ -312,7 +313,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login handler with password verification, role management, and session routing."""
-    if 'user_id' in session:
+    if request.method == 'GET' and 'user_id' in session:
         user_role = session.get('user_role')
         if user_role == 'admin':
             return redirect(url_for('admin_dashboard'))
@@ -330,7 +331,18 @@ def login():
             return render_template('login.html')
 
         db.session.expire_all()
-        user = User.query.filter_by(email=email).first()
+        identifier = email.strip()
+        user = None
+        if identifier.upper().startswith('ATH-'):
+            try:
+                raw_id = int(identifier.split('-')[1])
+                user = db.session.get(User, raw_id)
+            except (IndexError, ValueError):
+                user = None
+
+        if not user:
+            user = User.query.filter(db.func.lower(User.email) == identifier.lower()).first()
+
         if user:
             db.session.refresh(user)
 
@@ -339,8 +351,9 @@ def login():
                 role_label = user.role.capitalize() if user.role else 'Athlete'
                 msg = f"Your {role_label} account has been deactivated by the administrator. Please contact support."
                 flash(msg, "danger")
-                return render_template('login.html', error_msg=msg)
+                return render_template('login.html')
 
+            session.clear()
             session.permanent = True if remember else False
             session['user_id'] = user.id
             session['user_name'] = user.full_name
@@ -356,7 +369,7 @@ def login():
             return redirect(url_for('dashboard'))
         else:
             flash("Invalid Athlete ID/Email or password. Please try again.", "danger")
-            return render_template('login.html', error_msg="Invalid credentials. Please check your email and password.")
+            return render_template('login.html')
 
     return render_template('login.html')
 
@@ -507,6 +520,285 @@ def admin_create_coach():
     except Exception as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': f'Database error: {str(e)}'}), 500
+
+def generate_unique_team_code(sport):
+    """
+    Generates a unique, readable Team Code with sport prefix and random alphanumeric string.
+    Example: Football -> FB-7K29Q, Basketball -> BB-4P8LX
+    """
+    sport_prefixes = {
+        'Football': 'FB',
+        'Basketball': 'BB',
+        'Cricket': 'CR',
+        'Volleyball': 'VB',
+        'Athletics': 'AT',
+        'Other': 'TM'
+    }
+    prefix = sport_prefixes.get(sport.strip().capitalize() if sport else 'Other', 'TM')
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    for _ in range(100):
+        code_suffix = ''.join(secrets.choice(alphabet) for _ in range(5))
+        code = f"{prefix}-{code_suffix}"
+        if not Team.query.filter_by(team_code=code).first():
+            return code
+    return f"{prefix}-{secrets.token_hex(3).upper()}"
+
+
+# ==========================================
+# STEP 3: COACH TEAM CREATION & MANAGEMENT APIs
+# ==========================================
+
+@app.route('/coach/teams')
+@coach_required
+def coach_teams_page():
+    """Coach My Teams Landing Page - Protected Route for Coach Users."""
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+    return render_template('coach/teams.html', user=user)
+
+
+@app.route('/api/coach/teams', methods=['GET', 'POST'])
+@coach_required
+def api_coach_teams():
+    """API for Coach to list their created teams or create a new team."""
+    coach_id = session.get('user_id')
+    user = User.query.get(coach_id)
+    if not user or user.role != 'coach':
+        return jsonify({'status': 'error', 'message': 'Unauthorized coach access.'}), 403
+
+    if request.method == 'GET':
+        teams = Team.query.filter_by(coach_id=coach_id).order_by(Team.created_at.desc()).all()
+        return jsonify({
+            'status': 'success',
+            'count': len(teams),
+            'teams': [t.to_dict() for t in teams]
+        })
+
+    data = request.get_json() or request.form.to_dict()
+    team_name = data.get('team_name', '').strip()
+    sport = data.get('sport', '').strip()
+    season = data.get('season', '2026-27').strip() or '2026-27'
+    description = data.get('description', '').strip()
+
+    if not team_name:
+        return jsonify({'status': 'error', 'message': 'Team Name is required.'}), 400
+
+    if len(team_name) > 100:
+        return jsonify({'status': 'error', 'message': 'Team Name cannot exceed 100 characters.'}), 400
+
+    allowed_sports = ['Football', 'Basketball', 'Cricket', 'Volleyball', 'Athletics', 'Other']
+    if not sport or sport not in allowed_sports:
+        return jsonify({'status': 'error', 'message': f'Sport must be one of: {", ".join(allowed_sports)}'}), 400
+
+    try:
+        team_code = generate_unique_team_code(sport)
+        new_team = Team(
+            team_name=team_name,
+            sport=sport,
+            season=season,
+            description=description,
+            coach_id=coach_id,
+            team_code=team_code,
+            status='active'
+        )
+        db.session.add(new_team)
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': f"Team '{team_name}' created successfully with code '{team_code}'.",
+            'team': new_team.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': f'Unable to create team: {str(e)}'}), 500
+
+
+@app.route('/coach/teams/<int:team_id>')
+@coach_required
+def coach_team_detail_page(team_id):
+    """Coach View Team Detail Page - Protected Route."""
+    coach_id = session.get('user_id')
+    user = User.query.get(coach_id)
+    team = Team.query.filter_by(id=team_id, coach_id=coach_id).first()
+    if not team:
+        flash("Access denied. You can only view teams you created.", "danger")
+        return redirect(url_for('coach_teams_page'))
+    return render_template('coach/team_detail.html', user=user, team=team)
+
+
+@app.route('/api/coach/teams/<int:team_id>', methods=['GET'])
+@coach_required
+def api_coach_team_detail(team_id):
+    """API Endpoint returning team details and member roster for coach-owned team."""
+    coach_id = session.get('user_id')
+    team = Team.query.filter_by(id=team_id, coach_id=coach_id).first()
+    if not team:
+        return jsonify({'status': 'error', 'message': 'Team not found or unauthorized.'}), 403
+
+    memberships = TeamMember.query.filter_by(team_id=team_id, status='active').order_by(TeamMember.joined_at.desc()).all()
+    members_data = [m.to_dict() for m in memberships]
+
+    return jsonify({
+        'status': 'success',
+        'team': team.to_dict(),
+        'member_count': len(members_data),
+        'members': members_data
+    })
+
+
+@app.route('/api/coach/teams/<int:team_id>/members/<int:athlete_id>/remove', methods=['POST'])
+@coach_required
+def api_coach_remove_member(team_id, athlete_id):
+    """API Endpoint for Coach to remove an athlete from their team."""
+    coach_id = session.get('user_id')
+    team = Team.query.filter_by(id=team_id, coach_id=coach_id).first()
+    if not team:
+        return jsonify({'status': 'error', 'message': 'Team not found or unauthorized.'}), 403
+
+    membership = TeamMember.query.filter_by(team_id=team_id, athlete_id=athlete_id, status='active').first()
+    if not membership:
+        return jsonify({'status': 'error', 'message': 'Athlete is not an active member of this team.'}), 404
+
+    try:
+        membership.status = 'removed'
+        db.session.commit()
+        athlete = User.query.get(athlete_id)
+        athlete_name = athlete.full_name if athlete else 'Athlete'
+        return jsonify({
+            'status': 'success',
+            'message': f"'{athlete_name}' has been removed from '{team.team_name}'."
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to remove member.'}), 500
+
+
+# ==========================================
+# STEP 3: ATHLETE TEAM JOINING & VIEWING APIs
+# ==========================================
+
+@app.route('/join-team')
+@login_required
+def join_team_page():
+    """Athlete Join Team Page."""
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+    if user.role != 'athlete':
+        flash("Only athletes can join teams.", "warning")
+        return redirect(url_for('dashboard'))
+    return render_template('join_team.html', user=user)
+
+
+@app.route('/api/teams/join', methods=['POST'])
+@login_required
+def api_join_team():
+    """API Endpoint for Athlete to enter a Team Code and join a team."""
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    if not user or user.role != 'athlete':
+        return jsonify({'status': 'error', 'message': 'Only athletes are permitted to join teams.'}), 403
+
+    data = request.get_json() or request.form.to_dict()
+    team_code = data.get('team_code', '').strip().upper()
+
+    if not team_code:
+        return jsonify({'status': 'error', 'message': 'Team Code is required.'}), 400
+
+    team = Team.query.filter_by(team_code=team_code).first()
+    if not team:
+        return jsonify({'status': 'error', 'message': f"No team found matching code '{team_code}'."}), 404
+
+    if team.status != 'active':
+        return jsonify({'status': 'error', 'message': f"Team '{team.team_name}' is currently inactive and not accepting new members."}), 400
+
+    existing_active = TeamMember.query.filter_by(team_id=team.id, athlete_id=user_id, status='active').first()
+    if existing_active:
+        return jsonify({'status': 'error', 'message': f"You are already an active member of '{team.team_name}'."}), 400
+
+    try:
+        membership = TeamMember.query.filter_by(team_id=team.id, athlete_id=user_id).first()
+        if membership:
+            membership.status = 'active'
+            membership.joined_at = datetime.utcnow()
+        else:
+            membership = TeamMember(
+                team_id=team.id,
+                athlete_id=user_id,
+                status='active'
+            )
+            db.session.add(membership)
+
+        db.session.commit()
+        return jsonify({
+            'status': 'success',
+            'message': f"Successfully joined '{team.team_name}'!",
+            'team': team.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to join team. Please try again.'}), 500
+
+
+@app.route('/my-team')
+@login_required
+def my_team_page():
+    """Athlete My Team View Page."""
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+    if user.role != 'athlete':
+        return redirect(url_for('coach_teams_page') if user.role == 'coach' else url_for('admin_dashboard'))
+    return render_template('my_team.html', user=user)
+
+
+@app.route('/api/my-team', methods=['GET'])
+@login_required
+def api_get_my_team():
+    """API Endpoint returning athlete's active team memberships."""
+    user_id = session.get('user_id')
+    memberships = TeamMember.query.filter_by(athlete_id=user_id, status='active').order_by(TeamMember.joined_at.desc()).all()
+    teams_list = [m.to_dict() for m in memberships]
+
+    return jsonify({
+        'status': 'success',
+        'count': len(teams_list),
+        'teams': teams_list
+    })
+
+
+@app.route('/api/teams/leave', methods=['POST'])
+@login_required
+def api_leave_team():
+    """API Endpoint for Athlete to leave a team."""
+    user_id = session.get('user_id')
+    data = request.get_json() or request.form.to_dict()
+    team_id = data.get('team_id')
+
+    if not team_id:
+        return jsonify({'status': 'error', 'message': 'Team ID is required.'}), 400
+
+    membership = TeamMember.query.filter_by(team_id=team_id, athlete_id=user_id, status='active').first()
+    if not membership:
+        return jsonify({'status': 'error', 'message': 'Active team membership not found.'}), 404
+
+    try:
+        membership.status = 'left'
+        db.session.commit()
+        team = Team.query.get(team_id)
+        team_name = team.team_name if team else 'the team'
+        return jsonify({
+            'status': 'success',
+            'message': f"You have left '{team_name}'."
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Unable to leave team. Please try again.'}), 500
 
 
 # ==========================================
