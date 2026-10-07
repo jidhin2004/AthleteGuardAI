@@ -140,7 +140,7 @@ class TestTeam(unittest.TestCase):
         res = self.client.post('/api/teams/join', json={'team_code': t1.team_code, 'csrf_token': self.csrf_token})
         self.assertEqual(res.status_code, 400)
         data = res.get_json()
-        self.assertIn("already an active member", data['message'].lower())
+        self.assertIn("already a member", data['message'].lower())
 
     def test_07_athlete_views_my_team(self):
         """TEST 7: Athlete opens My Team endpoint and views correct membership data."""

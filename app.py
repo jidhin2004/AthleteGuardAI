@@ -461,11 +461,18 @@ def register():
 @coach_required
 def coach_dashboard():
     """Coach Dashboard Landing Page - Protected Route for Coach Users."""
-    user = User.query.get(session.get('user_id'))
+    coach_id = session.get('user_id')
+    user = db.session.get(User, coach_id)
     if not user:
         session.clear()
         return redirect(url_for('login'))
-    return render_template('coach/dashboard.html', user=user)
+
+    teams = Team.query.filter_by(coach_id=coach_id).all()
+    teams_count = len(teams)
+    team_ids = [t.id for t in teams]
+    total_players_count = TeamMember.query.filter(TeamMember.team_id.in_(team_ids), TeamMember.status == 'active').count() if team_ids else 0
+
+    return render_template('coach/dashboard.html', user=user, teams_count=teams_count, total_players_count=total_players_count, teams=teams)
 
 
 @app.route('/api/admin/create-coach', methods=['POST'])

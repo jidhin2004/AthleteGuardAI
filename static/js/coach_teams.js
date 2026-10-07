@@ -1,5 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
   loadCoachTeams();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('create') === 'true' || window.location.hash === '#create') {
+    const modalEl = document.getElementById('createTeamModal');
+    if (modalEl) {
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+  }
 });
 
 function showAlert(msg, type = 'success') {

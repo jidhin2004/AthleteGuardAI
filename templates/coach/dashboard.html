@@ -20,6 +20,8 @@
 
       <nav class="sidebar-nav">
         <a href="{{ url_for('coach_dashboard') }}" class="nav-item-link active"><i class="fa-solid fa-users-gear"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('coach_teams_page') }}" class="nav-item-link"><i class="fa-solid fa-people-group"></i><span>My Teams</span></a>
+        <a href="{{ url_for('coach_teams_page') }}?create=true" class="nav-item-link"><i class="fa-solid fa-plus-circle"></i><span>Create Team</span></a>
       </nav>
     </div>
 
@@ -43,9 +45,9 @@
         <h1 class="header-title">Coach Dashboard</h1>
       </div>
       <div class="header-right">
-        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 fw-semibold me-2">
-          <i class="fa-solid fa-user-shield me-1"></i> Head Coach
-        </span>
+        <a href="{{ url_for('coach_teams_page') }}" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm">
+          <i class="fa-solid fa-people-group me-1"></i> My Teams
+        </a>
         <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold ms-2">
           <i class="fa-solid fa-sign-out-alt me-1"></i> Logout
         </a>
@@ -74,36 +76,75 @@
               <i class="fa-solid fa-people-group"></i>
             </div>
             <div>
-              <h5 class="fw-bold text-dark mb-1">Team management features will be available here.</h5>
-              <p class="text-muted mb-0">Your Coach account has been authenticated successfully and assigned to the <strong>{{ user.primary_sport }}</strong> discipline.</p>
+              <h5 class="fw-bold text-dark mb-1">Manage your sports teams and monitor your registered players.</h5>
+              <p class="text-muted mb-0">Your Coach account is active and configured for the <strong>{{ user.primary_sport }}</strong> discipline. Create sports squads and distribute unique join codes to your selected players.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Upcoming Coach Features Overview Cards -->
+      <!-- Real-Time Dynamic Coach Metrics Summary Row -->
+      <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-6">
+          <div class="card-master p-4 shadow-sm border rounded-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <span class="text-muted fs-8 text-uppercase fw-bold d-block">ACTIVE SQUADS</span>
+                <h2 class="display-5 fw-bold text-primary mb-0">{{ teams_count }}</h2>
+              </div>
+              <div class="brand-icon-sm bg-primary-subtle text-primary" style="width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 1.5rem;">
+                <i class="fa-solid fa-people-group"></i>
+              </div>
+            </div>
+            <p class="text-muted fs-7 mb-3">Total official sports teams created and managed by you.</p>
+            <a href="{{ url_for('coach_teams_page') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold">
+              <i class="fa-solid fa-eye me-1"></i> View My Teams →
+            </a>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-lg-6">
+          <div class="card-master p-4 shadow-sm border rounded-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <span class="text-muted fs-8 text-uppercase fw-bold d-block">TOTAL PLAYERS</span>
+                <h2 class="display-5 fw-bold text-success mb-0">{{ total_players_count }}</h2>
+              </div>
+              <div class="brand-icon-sm bg-success-subtle text-success" style="width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 1.5rem;">
+                <i class="fa-solid fa-users"></i>
+              </div>
+            </div>
+            <p class="text-muted fs-7 mb-3">Active player memberships registered across your teams.</p>
+            <a href="{{ url_for('coach_teams_page') }}?create=true" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold text-white">
+              <i class="fa-solid fa-plus-circle me-1"></i> Create New Team
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overview Information Cards -->
       <div class="row g-4">
         <div class="col-md-4">
           <div class="card-master h-100 p-4">
             <div class="text-primary mb-3 fs-3"><i class="fa-solid fa-users-viewfinder"></i></div>
-            <h5 class="fw-bold text-dark mb-2">Squad Roster Monitoring</h5>
-            <p class="text-muted fs-7 mb-0">Track daily health metrics, sleep recovery, and workload logs across your assigned team members.</p>
+            <h5 class="fw-bold text-dark mb-2">Team Creation & Roster</h5>
+            <p class="text-muted fs-7 mb-0">Create new team squads with sport disciplines, seasons, and unique server-generated join codes for selected athletes.</p>
           </div>
         </div>
 
         <div class="col-md-4">
           <div class="card-master h-100 p-4">
-            <div class="text-warning mb-3 fs-3"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <h5 class="fw-bold text-dark mb-2">Team Risk Analytics</h5>
-            <p class="text-muted fs-7 mb-0">Access Random Forest injury risk distributions and receive automated alerts for high-risk athletes.</p>
+            <div class="text-info mb-3 fs-3"><i class="fa-solid fa-key"></i></div>
+            <h5 class="fw-bold text-dark mb-2">Unique Join Codes</h5>
+            <p class="text-muted fs-7 mb-0">Generate secure 5-character team codes (e.g. <code>FB-7K29Q</code>) to share with your university squad members.</p>
           </div>
         </div>
 
         <div class="col-md-4">
           <div class="card-master h-100 p-4">
-            <div class="text-success mb-3 fs-3"><i class="fa-solid fa-chart-simple"></i></div>
-            <h5 class="fw-bold text-dark mb-2">Team Summary Reports</h5>
-            <p class="text-muted fs-7 mb-0">Analyze 7-day and 30-day aggregated performance trends to optimize squad training schedules.</p>
+            <div class="text-success mb-3 fs-3"><i class="fa-solid fa-shield-halved"></i></div>
+            <h5 class="fw-bold text-dark mb-2">Sport Discipline Guard</h5>
+            <p class="text-muted fs-7 mb-0">Automated backend validation ensures players only join teams matching their registered primary sport.</p>
           </div>
         </div>
       </div>
