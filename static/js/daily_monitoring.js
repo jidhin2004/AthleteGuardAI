@@ -95,7 +95,8 @@ function bindSliderSyncing() {
 
 function setPreviousInjury(hasInj) {
   isPreviousInjurySelected = hasInj;
-  document.getElementById('previousInjuryVal').value = hasInj ? 'true' : 'false';
+  const valElem = document.getElementById('previousInjuryVal');
+  if (valElem) valElem.value = hasInj ? 'true' : 'false';
 
   const btnNo = document.getElementById('btnPrevInjNo');
   const btnYes = document.getElementById('btnPrevInjYes');
@@ -103,13 +104,13 @@ function setPreviousInjury(hasInj) {
   const summaryPrevInj = document.getElementById('summaryPrevInj');
 
   if (hasInj) {
-    btnYes.classList.add('active');
-    btnNo.classList.remove('active');
+    if (btnYes) btnYes.classList.add('active');
+    if (btnNo) btnNo.classList.remove('active');
     if (detailsContainer) detailsContainer.style.display = 'block';
     if (summaryPrevInj) summaryPrevInj.textContent = 'Yes';
   } else {
-    btnNo.classList.add('active');
-    btnYes.classList.remove('active');
+    if (btnNo) btnNo.classList.add('active');
+    if (btnYes) btnYes.classList.remove('active');
     if (detailsContainer) detailsContainer.style.display = 'none';
     if (summaryPrevInj) summaryPrevInj.textContent = 'No';
   }
@@ -123,7 +124,7 @@ async function checkTodayRecordStatus() {
     const data = await response.json();
     if (data.status === 'success' && data.has_today_record && data.record) {
       const rec = data.record;
-      // Pre-fill fields with today's saved record
+
       if (document.getElementById('sleepHoursSlider')) document.getElementById('sleepHoursSlider').value = rec.sleep_hours;
       if (document.getElementById('sleepHoursInput')) document.getElementById('sleepHoursInput').value = rec.sleep_hours;
       if (document.getElementById('sleepDisplayVal')) document.getElementById('sleepDisplayVal').textContent = `${rec.sleep_hours} hrs`;
@@ -154,13 +155,23 @@ async function checkTodayRecordStatus() {
       const todayBanner = document.getElementById('todayRecordedBanner');
       if (todayBanner) todayBanner.style.display = 'flex';
 
-      // If risk score was previously calculated, render result box
-      if (rec.risk_score !== null) {
+      const btnUpdateRec = document.getElementById('btnToggleUpdateRecord');
+      if (btnUpdateRec) {
+        btnUpdateRec.addEventListener('click', () => {
+          const formCard = document.getElementById('healthMonitoringForm');
+          if (formCard) formCard.scrollIntoView({ behavior: 'smooth' });
+        });
+      }
+
+      // Render prediction result if available
+      if (rec.risk_score !== null && rec.risk_score !== undefined) {
+        const riskLabel = rec.risk_label || 'Low Risk';
+        const badgeColor = riskLabel.toLowerCase().includes('high') ? 'danger' : (riskLabel.toLowerCase().includes('medium') ? 'warning' : 'success');
         renderPredictionResult({
           risk_score: rec.risk_score,
-          risk_label: rec.risk_label,
-          badge_color: rec.risk_label.toLowerCase().includes('low') ? 'success' : (rec.risk_label.toLowerCase().includes('medium') ? 'warning' : 'danger'),
-          contributing_factors: ['Previously recorded daily health data'],
+          risk_label: riskLabel,
+          badge_color: badgeColor,
+          contributing_factors: ['Recorded daily health parameters for today.'],
           recommendations: ['Continue maintaining current recovery and workload balance.']
         });
       }
@@ -187,13 +198,21 @@ async function handleFormSubmit(e) {
 
   if (alertError) alertError.style.display = 'none';
 
-  const sleepHours = parseFloat(document.getElementById('sleepHoursInput').value);
-  const trainingHours = parseFloat(document.getElementById('trainingHoursInput').value);
-  const restingHeartRate = parseInt(document.getElementById('restingHeartRate').value);
-  const fatigueLevel = parseInt(document.getElementById('fatigueSlider').value);
-  const stressLevel = parseInt(document.getElementById('stressSlider').value);
-  const previousInjury = document.getElementById('previousInjuryVal').value === 'true';
-  const injuryDetails = document.getElementById('injuryDetailsText').value.trim();
+  const sleepInputEl = document.getElementById('sleepHoursInput');
+  const trainingInputEl = document.getElementById('trainingHoursInput');
+  const rhrInputEl = document.getElementById('restingHeartRate');
+  const fatigueSliderEl = document.getElementById('fatigueSlider');
+  const stressSliderEl = document.getElementById('stressSlider');
+  const prevInjValEl = document.getElementById('previousInjuryVal');
+  const injDetailsEl = document.getElementById('injuryDetailsText');
+
+  const sleepHours = sleepInputEl ? parseFloat(sleepInputEl.value) : 7.5;
+  const trainingHours = trainingInputEl ? parseFloat(trainingInputEl.value) : 3.5;
+  const restingHeartRate = rhrInputEl ? parseInt(rhrInputEl.value) : 65;
+  const fatigueLevel = fatigueSliderEl ? parseInt(fatigueSliderEl.value) : 5;
+  const stressLevel = stressSliderEl ? parseInt(stressSliderEl.value) : 5;
+  const previousInjury = prevInjValEl ? (prevInjValEl.value === 'true') : false;
+  const injuryDetails = injDetailsEl ? injDetailsEl.value.trim() : '';
 
   let isValid = true;
 
@@ -220,6 +239,10 @@ async function handleFormSubmit(e) {
 
   if (!isValid) return;
 
+  const csrfToken = (typeof getCsrfToken === 'function' ? getCsrfToken() : '') || 
+                    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                    document.querySelector('input[name="csrf_token"]')?.value || '';
+
   const payload = {
     sleep_hours: sleepHours,
     training_hours: trainingHours,
@@ -227,20 +250,22 @@ async function handleFormSubmit(e) {
     fatigue_level: fatigueLevel,
     stress_level: stressLevel,
     previous_injury: previousInjury,
-    injury_details: injuryDetails
+    injury_details: injuryDetails,
+    csrf_token: csrfToken
   };
 
-  // Button loading state
-  const origBtnText = btnPredict.innerHTML;
-  btnPredict.disabled = true;
-  btnPredict.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Analyzing Health Data...';
+  const origBtnText = btnPredict ? btnPredict.innerHTML : '<i class="fa-solid fa-shield-halved me-2"></i> Predict Injury Risk';
+  if (btnPredict) {
+    btnPredict.disabled = true;
+    btnPredict.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Analyzing Health Data...';
+  }
 
   try {
     const response = await fetch('/api/predictions/predict', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+        'X-CSRFToken': csrfToken
       },
       body: JSON.stringify(payload)
     });
@@ -252,7 +277,9 @@ async function handleFormSubmit(e) {
     }
 
     // Render ML Prediction Result Card
-    renderPredictionResult(resData.prediction);
+    if (resData.prediction) {
+      renderPredictionResult(resData.prediction);
+    }
 
     // Show Success Alert
     if (alertSuccess) {
@@ -273,8 +300,10 @@ async function handleFormSubmit(e) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   } finally {
-    btnPredict.disabled = false;
-    btnPredict.innerHTML = origBtnText;
+    if (btnPredict) {
+      btnPredict.disabled = false;
+      btnPredict.innerHTML = origBtnText;
+    }
   }
 }
 
@@ -287,11 +316,16 @@ function renderPredictionResult(pred) {
 
   if (!card) return;
 
-  if (scoreElem) scoreElem.textContent = `${pred.risk_score}%`;
+  if (scoreElem) {
+    const scoreVal = (pred.risk_score !== null && pred.risk_score !== undefined) ? pred.risk_score : 0;
+    scoreElem.textContent = `${scoreVal}%`;
+  }
   
   if (badgeElem) {
-    badgeElem.textContent = pred.risk_label.toUpperCase();
-    badgeElem.className = `badge fs-6 px-3 py-1.5 rounded-pill fw-bold bg-${pred.badge_color}`;
+    const riskLabel = pred.risk_label || 'Low Risk';
+    const badgeColor = pred.badge_color || (riskLabel.toLowerCase().includes('high') ? 'danger' : (riskLabel.toLowerCase().includes('medium') ? 'warning' : 'success'));
+    badgeElem.textContent = riskLabel.toUpperCase();
+    badgeElem.className = `badge fs-6 px-3 py-1.5 rounded-pill fw-bold bg-${badgeColor}`;
   }
 
   if (factorsList && pred.contributing_factors) {

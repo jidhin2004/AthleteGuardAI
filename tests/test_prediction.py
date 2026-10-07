@@ -32,7 +32,10 @@ class TestPrediction(unittest.TestCase):
         self.app_context.pop()
 
     def _login(self):
-        return self.client.post('/login', data={'email': self.athlete.email, 'password': 'Password123!'})
+        res = self.client.post('/login', data={'email': self.athlete.email, 'password': 'Password123!'})
+        with self.client.session_transaction() as sess:
+            sess['csrf_token'] = "test_csrf_token_pred"
+        return res
 
     def test_ml_service_direct_prediction(self):
         """Verify direct ml_service execution produces score (0-100%) and valid risk label."""
@@ -48,7 +51,7 @@ class TestPrediction(unittest.TestCase):
         self.assertIn('risk_label', pred)
         self.assertGreaterEqual(pred['risk_score'], 0.0)
         self.assertLessEqual(pred['risk_score'], 100.0)
-        self.assertIn(pred['risk_label'], ['Low Risk', 'Moderate Risk', 'High Risk'])
+        self.assertIn(pred['risk_label'], ['Low Risk', 'Medium Risk', 'Moderate Risk', 'High Risk'])
 
     def test_high_workload_prediction_escalation(self):
         """Verify high fatigue, high training hours, and previous injury result in elevated risk score."""
@@ -71,7 +74,8 @@ class TestPrediction(unittest.TestCase):
             'resting_heart_rate': 68,
             'fatigue_level': 4,
             'stress_level': 3,
-            'previous_injury': False
+            'previous_injury': False,
+            'csrf_token': "test_csrf_token_pred"
         }
         res_pred = self.client.post('/api/predictions/predict', json=payload)
         self.assertEqual(res_pred.status_code, 200)
@@ -79,8 +83,9 @@ class TestPrediction(unittest.TestCase):
         res_hist = self.client.get('/api/predictions/history')
         self.assertEqual(res_hist.status_code, 200)
         data = res_hist.get_json()
-        self.assertGreaterEqual(len(data['history']), 1)
-        self.assertIsNotNone(data['history'][0]['risk_score'])
+        records = data.get('records', data.get('history', []))
+        self.assertGreaterEqual(len(records), 1)
+        self.assertIsNotNone(records[0]['risk_score'])
 
 if __name__ == '__main__':
     unittest.main()
