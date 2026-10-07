@@ -697,11 +697,18 @@ def join_team_page():
 @app.route('/api/teams/join', methods=['POST'])
 @login_required
 def api_join_team():
-    """API Endpoint for Athlete to enter a Team Code and join a team."""
+    """
+    API Endpoint for Selected Athlete to enter a Team Code and join a team.
+    Enforces server-side authentication, account status check, team code validity,
+    team status, primary sport matching, duplicate membership check, and single active team constraint.
+    """
     user_id = session.get('user_id')
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or user.role != 'athlete':
         return jsonify({'status': 'error', 'message': 'Only athletes are permitted to join teams.'}), 403
+
+    if (user.account_status or 'active').lower() != 'active':
+        return jsonify({'status': 'error', 'message': 'Your athlete account is inactive and cannot join teams.'}), 403
 
     data = request.get_json() or request.form.to_dict()
     team_code = data.get('team_code', '').strip().upper()
@@ -713,12 +720,31 @@ def api_join_team():
     if not team:
         return jsonify({'status': 'error', 'message': f"No team found matching code '{team_code}'."}), 404
 
-    if team.status != 'active':
+    if (team.status or 'active').lower() != 'active':
         return jsonify({'status': 'error', 'message': f"Team '{team.team_name}' is currently inactive and not accepting new members."}), 400
 
-    existing_active = TeamMember.query.filter_by(team_id=team.id, athlete_id=user_id, status='active').first()
-    if existing_active:
-        return jsonify({'status': 'error', 'message': f"You are already an active member of '{team.team_name}'."}), 400
+    # 1. Sport matching validation (Case-insensitive)
+    athlete_sport = (user.primary_sport or '').strip().lower()
+    team_sport = (team.sport or '').strip().lower()
+    if athlete_sport != team_sport:
+        return jsonify({
+            'status': 'error',
+            'message': f"This team is for {team.sport}. Your registered primary sport ({user.primary_sport}) does not match this team."
+        }), 400
+
+    # 2. Duplicate membership check for this exact team
+    existing_in_same_team = TeamMember.query.filter_by(team_id=team.id, athlete_id=user_id, status='active').first()
+    if existing_in_same_team:
+        return jsonify({'status': 'error', 'message': 'You are already a member of this team.'}), 400
+
+    # 3. Single active team constraint across all teams
+    existing_in_other_team = TeamMember.query.filter(
+        TeamMember.athlete_id == user_id,
+        TeamMember.team_id != team.id,
+        TeamMember.status == 'active'
+    ).first()
+    if existing_in_other_team:
+        return jsonify({'status': 'error', 'message': 'You are already assigned to another active team.'}), 400
 
     try:
         membership = TeamMember.query.filter_by(team_id=team.id, athlete_id=user_id).first()
@@ -741,7 +767,7 @@ def api_join_team():
         })
     except Exception as e:
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': 'Unable to join team. Please try again.'}), 500
+        return jsonify({'status': 'error', 'message': f'Unable to join team: {str(e)}'}), 500
 
 
 @app.route('/my-team')

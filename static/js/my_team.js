@@ -52,7 +52,10 @@ function renderMyTeams(teams) {
     <div class="col-md-6 col-lg-6">
       <div class="card-master p-4 shadow-sm border rounded-4 h-100 position-relative">
         <div class="d-flex justify-content-between align-items-start mb-3">
-          <span class="badge bg-info text-dark rounded-pill px-3 py-1.5 fw-semibold">${escapeHtml(t.team_sport)}</span>
+          <div>
+            <span class="badge bg-info text-dark rounded-pill px-3 py-1.5 fw-semibold me-1">${escapeHtml(t.team_sport)}</span>
+            <span class="badge bg-secondary rounded-pill px-2.5 py-1.5 fs-8">Season: ${escapeHtml(t.team_season || '2026-27')}</span>
+          </div>
           <span class="badge bg-success rounded-pill px-3 py-1.5"><i class="fa-solid fa-circle-check me-1"></i> Active Member</span>
         </div>
 
@@ -73,10 +76,8 @@ function renderMyTeams(teams) {
         </div>
 
         <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-          <span class="text-muted fs-7"><i class="fa-solid fa-shield-halved text-success me-1"></i> Member Verified</span>
-          <button type="button" class="btn btn-outline-warning btn-sm rounded-pill px-3 fw-semibold text-dark" onclick="confirmLeaveTeam(${t.team_id}, '${escapeHtml(t.team_name)}')">
-            <i class="fa-solid fa-right-from-bracket me-1"></i> Leave Team
-          </button>
+          <span class="text-muted fs-7"><i class="fa-solid fa-shield-halved text-success me-1"></i> Status: Active</span>
+          <span class="text-muted fs-8">Verified Membership</span>
         </div>
       </div>
     </div>

@@ -66,6 +66,8 @@ class TeamMember(db.Model):
             'team_name': team.team_name if team else 'Unknown Team',
             'team_code': team.team_code if team else '',
             'team_sport': team.sport if team else '',
+            'team_season': team.season if (team and team.season) else '2026-27',
+            'team_description': team.description if (team and team.description) else '',
             'coach_id': team.coach_id if team else None,
             'coach_name': coach.full_name if coach else 'Unknown Coach',
             'status': self.status,
