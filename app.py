@@ -835,6 +835,120 @@ def api_leave_team():
 
 
 # ==========================================
+# TEAM DAILY HEALTH CHECK-IN TRACKING APIs
+# ==========================================
+
+@app.route('/api/coach/teams/<int:team_id>/daily-checkins', methods=['GET'])
+@coach_required
+def api_coach_team_daily_checkins(team_id):
+    """
+    API Endpoint for Coach to track today's daily health check-in status
+    for all active players in a coach-owned team.
+    Calculates total_players, submitted, pending, and completion_percentage.
+    """
+    coach_id = session.get('user_id')
+    team = Team.query.filter_by(id=team_id, coach_id=coach_id).first()
+    if not team:
+        return jsonify({'status': 'error', 'message': 'Team not found or unauthorized.'}), 403
+
+    memberships = TeamMember.query.filter_by(team_id=team_id, status='active').order_by(TeamMember.joined_at.asc()).all()
+    total_players = len(memberships)
+
+    today_str = datetime.utcnow().strftime('%Y-%m-%d')
+    yesterday_str = (datetime.utcnow().date() - timedelta(days=1)).strftime('%Y-%m-%d')
+    submitted_count = 0
+    pending_count = 0
+    players_data = []
+
+    for m in memberships:
+        athlete = db.session.get(User, m.athlete_id)
+        if not athlete:
+            continue
+
+        # Check today's health record
+        today_record = DailyHealthRecord.query.filter_by(user_id=athlete.id, record_date=today_str).first()
+        latest_record = today_record or DailyHealthRecord.query.filter_by(user_id=athlete.id).order_by(DailyHealthRecord.record_date.desc()).first()
+
+        if today_record:
+            submitted_count += 1
+            checkin_status = "Submitted"
+            last_update_label = "Today"
+            last_update_date = today_record.record_date
+            risk_score = today_record.risk_score
+            risk_label = today_record.risk_label
+            record_id = today_record.id
+        else:
+            pending_count += 1
+            checkin_status = "Pending"
+            if latest_record:
+                if latest_record.record_date == yesterday_str:
+                    last_update_label = "Yesterday"
+                else:
+                    last_update_label = latest_record.record_date
+                last_update_date = latest_record.record_date
+            else:
+                last_update_label = "Never"
+                last_update_date = None
+            risk_score = None
+            risk_label = None
+            record_id = None
+
+        players_data.append({
+            'athlete_id': athlete.id,
+            'athlete_name': athlete.full_name,
+            'athlete_code': athlete.athlete_id,
+            'athlete_email': athlete.email,
+            'primary_sport': athlete.primary_sport,
+            'profile_photo': athlete.profile_photo,
+            'checkin_status': checkin_status,
+            'last_update': last_update_label,
+            'last_update_date': last_update_date,
+            'risk_score': risk_score,
+            'risk_label': risk_label,
+            'record_id': record_id
+        })
+
+    completion_percentage = round((submitted_count / total_players * 100), 1) if total_players > 0 else 0.0
+
+    return jsonify({
+        'status': 'success',
+        'team_id': team.id,
+        'team_name': team.team_name,
+        'sport': team.sport,
+        'season': team.season or '2026-27',
+        'total_players': total_players,
+        'submitted': submitted_count,
+        'pending': pending_count,
+        'completion_percentage': completion_percentage,
+        'checkin_date': today_str,
+        'players': players_data
+    })
+
+
+@app.route('/api/athlete/today-checkin-status', methods=['GET'])
+@login_required
+def api_athlete_today_checkin_status():
+    """
+    API Endpoint returning today's check-in status for the logged-in athlete.
+    Used by Athlete Dashboard to show submitted vs pending reminder.
+    """
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id)
+    if not user or user.role != 'athlete':
+        return jsonify({'status': 'error', 'message': 'Athlete role required.'}), 403
+
+    today_str = datetime.utcnow().strftime('%Y-%m-%d')
+    today_record = DailyHealthRecord.query.filter_by(user_id=user_id, record_date=today_str).first()
+
+    return jsonify({
+        'status': 'success',
+        'is_submitted': today_record is not None,
+        'record_date': today_str,
+        'record': today_record.to_dict() if today_record else None
+    })
+
+
+# ==========================================
 # ADMIN PAGE ROUTES & REST APIs
 # ==========================================
 

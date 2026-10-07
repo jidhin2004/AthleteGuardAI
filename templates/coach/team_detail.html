@@ -95,11 +95,58 @@
         </div>
       </div>
 
+      <!-- Today's Health Check-in Tracking Card -->
+      <div class="card-master mb-4">
+        <div class="card-header-master border-0 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+          <div>
+            <h4 class="card-title-master"><i class="fa-solid fa-calendar-check me-2 text-primary"></i> Today's Health Check-in Tracking</h4>
+            <p class="text-muted fs-7 mb-0">Daily health monitoring completion for today (<strong id="checkinDateDisplay">Today</strong>).</p>
+          </div>
+          <div>
+            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold" onclick="loadCheckinTracking()">
+              <i class="fa-solid fa-rotate-right me-1"></i> Refresh Check-ins
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <span class="text-muted fs-8 text-uppercase d-block fw-bold mb-1">TOTAL PLAYERS</span>
+              <h3 class="fw-bold text-dark mb-0" id="statTotalPlayers">0</h3>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-success-subtle text-success rounded-3 text-center border border-success-subtle">
+              <span class="fs-8 text-uppercase d-block fw-bold mb-1">SUBMITTED TODAY</span>
+              <h3 class="fw-bold mb-0" id="statSubmittedToday">0</h3>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-warning-subtle text-warning-emphasis rounded-3 text-center border border-warning-subtle">
+              <span class="fs-8 text-uppercase d-block fw-bold mb-1">PENDING TODAY</span>
+              <h3 class="fw-bold mb-0" id="statPendingToday">0</h3>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-primary-subtle text-primary rounded-3 text-center border border-primary-subtle">
+              <span class="fs-8 text-uppercase d-block fw-bold mb-1">COMPLETION RATE</span>
+              <h3 class="fw-bold mb-0" id="statCompletionRate">0%</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completion Progress Bar -->
+        <div class="progress rounded-pill mb-1" style="height: 10px;">
+          <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" id="checkinProgressBar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+
       <!-- Team Members Table Section -->
       <div class="card-master">
         <div class="card-header-master border-0 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <div>
-            <h4 class="card-title-master"><i class="fa-solid fa-users me-2 text-primary"></i> Team Members Roster</h4>
+            <h4 class="card-title-master"><i class="fa-solid fa-users me-2 text-primary"></i> Team Members Roster & Check-ins</h4>
             <p class="text-muted fs-7 mb-0">Athletes currently registered under {{ team.team_name }}.</p>
           </div>
           <div>
@@ -111,7 +158,7 @@
 
         <div id="membersLoading" class="text-center py-5">
           <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading roster...</span></div>
-          <p class="text-muted mt-2">Loading squad members...</p>
+          <p class="text-muted mt-2">Loading squad members & check-in statuses...</p>
         </div>
 
         <div id="noMembersState" class="text-center py-5 bg-light rounded-3 border d-none">
@@ -126,10 +173,9 @@
               <tr>
                 <th>Athlete Name</th>
                 <th>Athlete ID</th>
-                <th>Email Address</th>
-                <th>Sport</th>
+                <th>Today's Check-in</th>
+                <th>Last Health Update</th>
                 <th>Joined Date</th>
-                <th>Status</th>
                 <th class="text-end">Actions</th>
               </tr>
             </thead>

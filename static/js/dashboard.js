@@ -92,11 +92,66 @@ async function initDashboardApp() {
     // Bind Time Filter Buttons (7 Days / 30 Days)
     setupTimeFilterListeners();
 
+    // Fetch and render Today's Health Check-in widget
+    loadTodayCheckinWidget();
+
   } catch (err) {
     console.error("Dashboard initialization error:", err);
     if (loadingOverlay) loadingOverlay.style.display = 'none';
     if (mainContent) mainContent.style.display = 'none';
     if (errorBanner) errorBanner.style.display = 'block';
+  }
+}
+
+async function loadTodayCheckinWidget() {
+  const widget = document.getElementById('todayCheckinStatusWidget');
+  const iconWrapper = document.getElementById('todayCheckinIconWrapper');
+  const icon = document.getElementById('todayCheckinIcon');
+  const badge = document.getElementById('todayCheckinStatusBadge');
+  const title = document.getElementById('todayCheckinTitle');
+  const subtext = document.getElementById('todayCheckinSubtext');
+  const actionBtn = document.getElementById('todayCheckinBtn');
+
+  if (!widget) return;
+
+  try {
+    const res = await fetch('/api/athlete/today-checkin-status');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      widget.style.display = 'block';
+
+      if (data.is_submitted) {
+        if (iconWrapper) iconWrapper.className = 'avatar-circle bg-success-subtle text-success fs-3 p-3';
+        if (icon) icon.className = 'fa-solid fa-circle-check';
+        if (badge) {
+          badge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-bold fs-7';
+          badge.innerHTML = '<i class="fa-solid fa-circle-check me-1"></i> Submitted Today';
+        }
+        if (title) title.textContent = "Today's Daily Health Check-in";
+        if (subtext) subtext.textContent = 'Awesome! Your daily health parameters for today have been recorded and analyzed.';
+        if (actionBtn) {
+          actionBtn.className = 'btn btn-outline-success rounded-pill px-4 py-2 fw-bold';
+          actionBtn.innerHTML = '<i class="fa-solid fa-pen-to-square me-1"></i> Update Today\'s Log';
+        }
+      } else {
+        if (iconWrapper) iconWrapper.className = 'avatar-circle bg-warning-subtle text-warning-emphasis fs-3 p-3';
+        if (icon) icon.className = 'fa-solid fa-triangle-exclamation';
+        if (badge) {
+          badge.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1 fw-bold fs-7';
+          badge.innerHTML = '<i class="fa-solid fa-clock-rotate-left me-1"></i> Not Submitted Today';
+        }
+        if (title) title.textContent = "Today's Daily Health Check-in";
+        if (subtext) subtext.textContent = 'You haven\'t logged your health data for today yet. Submit now to update your injury risk.';
+        if (actionBtn) {
+          actionBtn.className = 'btn btn-primary rounded-pill px-4 py-2 fw-bold';
+          actionBtn.innerHTML = '<i class="fa-solid fa-notes-medical me-1"></i> Submit Today\'s Log';
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error loading checkin status widget:', err);
   }
 }
 

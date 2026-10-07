@@ -16,6 +16,10 @@ function showAlert(msg, type = 'success') {
 }
 
 async function loadTeamDetail() {
+  await loadCheckinTracking();
+}
+
+async function loadCheckinTracking() {
   const loadingEl = document.getElementById('membersLoading');
   const noMembersEl = document.getElementById('noMembersState');
   const tableWrapperEl = document.getElementById('membersTableWrapper');
@@ -26,57 +30,91 @@ async function loadTeamDetail() {
   if (tableWrapperEl) tableWrapperEl.classList.add('d-none');
 
   try {
-    const res = await fetch(`/api/coach/teams/${CURRENT_TEAM_ID}`);
+    const res = await fetch(`/api/coach/teams/${CURRENT_TEAM_ID}/daily-checkins`);
     const data = await res.json();
 
     if (loadingEl) loadingEl.classList.add('d-none');
 
     if (data.status === 'success') {
-      if (badgeEl) badgeEl.textContent = `Members: ${data.member_count}`;
+      // Update Summary Cards
+      const totalEl = document.getElementById('statTotalPlayers');
+      const submittedEl = document.getElementById('statSubmittedToday');
+      const pendingEl = document.getElementById('statPendingToday');
+      const completionEl = document.getElementById('statCompletionRate');
+      const progressBarEl = document.getElementById('checkinProgressBar');
+      const dateDisplayEl = document.getElementById('checkinDateDisplay');
 
-      if (data.member_count === 0) {
+      if (totalEl) totalEl.textContent = data.total_players;
+      if (submittedEl) submittedEl.textContent = data.submitted;
+      if (pendingEl) pendingEl.textContent = data.pending;
+      if (completionEl) completionEl.textContent = `${data.completion_percentage}%`;
+      if (dateDisplayEl && data.checkin_date) dateDisplayEl.textContent = data.checkin_date;
+
+      if (progressBarEl) {
+        progressBarEl.style.width = `${data.completion_percentage}%`;
+        progressBarEl.setAttribute('aria-valuenow', data.completion_percentage);
+      }
+
+      if (badgeEl) badgeEl.textContent = `Members: ${data.total_players}`;
+
+      if (data.total_players === 0) {
         if (noMembersEl) noMembersEl.classList.remove('d-none');
       } else {
-        renderMembersTable(data.members);
+        renderMembersTable(data.players);
         if (tableWrapperEl) tableWrapperEl.classList.remove('d-none');
       }
     } else {
-      showAlert(data.message || 'Unable to load team roster.', 'danger');
+      showAlert(data.message || 'Unable to load check-in tracking data.', 'danger');
     }
   } catch (err) {
     if (loadingEl) loadingEl.classList.add('d-none');
-    showAlert('Network error fetching team roster.', 'danger');
+    showAlert('Network error fetching check-in tracking data.', 'danger');
   }
 }
 
-function renderMembersTable(members) {
+function renderMembersTable(players) {
   const tbody = document.getElementById('membersTbody');
   if (!tbody) return;
 
-  tbody.innerHTML = members.map(m => `
-    <tr>
-      <td>
-        <div class="d-flex align-items-center gap-2">
-          <div class="avatar-circle bg-primary text-white" style="width: 34px; height: 34px; font-size: 0.85rem;">
-            ${m.athlete_name[0] ? m.athlete_name[0].toUpperCase() : 'A'}
+  tbody.innerHTML = players.map(p => {
+    const isSubmitted = p.checkin_status === 'Submitted';
+    const checkinBadge = isSubmitted
+      ? `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-bold"><i class="fa-solid fa-circle-check me-1"></i> Submitted Today</span>`
+      : `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1 fw-bold"><i class="fa-solid fa-clock-rotate-left me-1"></i> Pending Today</span>`;
+
+    const lastUpdateBadge = p.last_update === 'Today'
+      ? `<span class="text-success fw-bold"><i class="fa-solid fa-calendar-day me-1"></i> Today</span>`
+      : p.last_update === 'Yesterday'
+      ? `<span class="text-secondary fw-semibold"><i class="fa-solid fa-calendar-minus me-1"></i> Yesterday</span>`
+      : p.last_update === 'Never'
+      ? `<span class="text-muted fst-italic">Never</span>`
+      : `<span class="text-dark fs-7">${escapeHtml(p.last_update)}</span>`;
+
+    return `
+      <tr>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="avatar-circle bg-primary text-white" style="width: 34px; height: 34px; font-size: 0.85rem;">
+              ${p.athlete_name[0] ? p.athlete_name[0].toUpperCase() : 'A'}
+            </div>
+            <div>
+              <div class="fw-bold text-dark">${escapeHtml(p.athlete_name)}</div>
+              <div class="text-muted fs-8">${escapeHtml(p.athlete_email)}</div>
+            </div>
           </div>
-          <div>
-            <div class="fw-bold text-dark">${escapeHtml(m.athlete_name)}</div>
-          </div>
-        </div>
-      </td>
-      <td><code>${escapeHtml(m.athlete_code)}</code></td>
-      <td><span class="text-muted fs-7">${escapeHtml(m.athlete_email)}</span></td>
-      <td><span class="badge bg-light text-dark border">${escapeHtml(m.athlete_sport || 'General')}</span></td>
-      <td><span class="fs-7 text-muted">${m.joined_at_formatted}</span></td>
-      <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Active</span></td>
-      <td class="text-end">
-        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="confirmRemoveMember(${m.athlete_id}, '${escapeHtml(m.athlete_name)}')">
-          <i class="fa-solid fa-user-minus me-1"></i> Remove
-        </button>
-      </td>
-    </tr>
-  `).join('');
+        </td>
+        <td><code>${escapeHtml(p.athlete_code || ('ATH-' + p.athlete_id))}</code></td>
+        <td>${checkinBadge}</td>
+        <td>${lastUpdateBadge}</td>
+        <td><span class="fs-7 text-muted">${p.joined_at_formatted || 'Active Member'}</span></td>
+        <td class="text-end">
+          <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="confirmRemoveMember(${p.athlete_id}, '${escapeHtml(p.athlete_name)}')">
+            <i class="fa-solid fa-user-minus me-1"></i> Remove
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function confirmRemoveMember(athleteId, athleteName) {
